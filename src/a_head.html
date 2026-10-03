@@ -1,0 +1,333 @@
+<title>FeederBox Simulador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#efebe0; --surface:#faf8f2; --ink:#262420; --muted:#6b6557; --line:#d8d1be; --line-soft:#e7e1d1;
+  --accent:#1e6b57; --accent-ink:#ffffff; --accent-soft:#d8eadf;
+  --warn:#a45a12; --warn-soft:#f6e4cc; --danger:#b3321f; --danger-soft:#f6dad4; --ok:#2c7a3f;
+  --scene-a:#ebe5d4; --scene-b:#cbc1a6; --wall-tint:#d6cdbb; --pill:rgba(255,253,247,.86);
+  --app-bg:#f5f2e9; --app-card:#ffffff; --app-line:#e3ddcc; --app-ink:#262420; --app-muted:#6b6557;
+  --c-feed:#9a6a2a; --c-sup:#7a8794; --c-liq:#c98a14;
+  --phone:#17191c; --shadow:0 18px 40px -18px rgba(40,34,20,.45);
+  --f-head:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+  --f-body:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141512; --surface:#1d1f1b; --ink:#ece8dc; --muted:#a09a89; --line:#34372f; --line-soft:#2a2c26;
+    --accent:#5fc2a0; --accent-ink:#0d1f19; --accent-soft:#1f3a31;
+    --warn:#e0a35a; --warn-soft:#3a2c18; --danger:#f08a78; --danger-soft:#43211b; --ok:#7ccf8d;
+    --scene-a:#23251f; --scene-b:#12130f; --wall-tint:#5c5950; --pill:rgba(29,31,27,.86);
+    --app-bg:#1a1c18; --app-card:#242722; --app-line:#363a32; --app-ink:#ece8dc; --app-muted:#a09a89;
+    --c-feed:#c8923f; --c-sup:#9fb0bf; --c-liq:#e3a62a;
+    --phone:#050505; --shadow:0 18px 40px -18px rgba(0,0,0,.8);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141512; --surface:#1d1f1b; --ink:#ece8dc; --muted:#a09a89; --line:#34372f; --line-soft:#2a2c26;
+  --accent:#5fc2a0; --accent-ink:#0d1f19; --accent-soft:#1f3a31;
+  --warn:#e0a35a; --warn-soft:#3a2c18; --danger:#f08a78; --danger-soft:#43211b; --ok:#7ccf8d;
+  --scene-a:#23251f; --scene-b:#12130f; --wall-tint:#5c5950; --pill:rgba(29,31,27,.86);
+  --app-bg:#1a1c18; --app-card:#242722; --app-line:#363a32; --app-ink:#ece8dc; --app-muted:#a09a89;
+  --c-feed:#c8923f; --c-sup:#9fb0bf; --c-liq:#e3a62a;
+  --phone:#050505; --shadow:0 18px 40px -18px rgba(0,0,0,.8);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:22px 40px}
+button{font-family:inherit;color:inherit}
+.wrap{max-width:1260px;margin-inline:auto}
+.top{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+.eyebrow{margin:0 0 2px;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font-family:var(--f-head);font-weight:700;font-size:clamp(34px,5vw,52px);line-height:1;letter-spacing:.01em}
+.lede{margin:6px 0 0;max-width:62ch;color:var(--muted)}
+.specs{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.specs li{font-family:var(--f-mono);font-size:11.5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:26px;align-items:start}
+.stage{min-width:0;display:flex;flex-direction:column;gap:14px}
+
+/* viewport 3D */
+.vp{position:relative;height:clamp(420px,68vh,700px);border:1px solid var(--line);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,var(--scene-a),var(--scene-b))}
+.vp canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.vp canvas:active{cursor:grabbing}
+.hud{position:absolute;left:10px;top:10px;display:grid;grid-template-columns:repeat(2,minmax(0,auto));gap:6px;pointer-events:none}
+.chip{background:var(--pill);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px;padding:5px 10px;min-width:104px}
+.chip small{display:block;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.chip b{display:block;font-family:var(--f-mono);font-weight:500;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip.wide{grid-column:1/-1}
+.vbar{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.vbar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:500;cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"],.btn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.pill{background:var(--pill);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.btn.pill[aria-pressed="true"]{background:var(--accent)}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;transform:translate(8px,-50%);white-space:nowrap;font-size:11px;font-weight:600;letter-spacing:.02em;background:var(--pill);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.lbl::before{content:"";position:absolute;left:-9px;top:50%;width:8px;height:1px;background:var(--muted)}
+.lbl::after{content:"";position:absolute;left:-12px;top:calc(50% - 2.5px);width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.lbl.l{transform:translate(calc(-100% - 8px),-50%)}
+.lbl.l::before{left:auto;right:-9px}
+.lbl.l::after{left:auto;right:-12px}
+.fallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+.tip{position:absolute;right:12px;top:12px;font-size:11.5px;color:var(--muted);background:var(--pill);border-radius:8px;padding:4px 9px;pointer-events:none}
+
+/* sim panel */
+.sim{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.ctl h3{margin:0;font-family:var(--f-head);font-weight:600;font-size:15px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.ctl p{margin:0;font-size:12.5px;color:var(--muted)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg .btn{padding:6px 10px;flex:1 0 auto;text-align:center}
+.clock{font-family:var(--f-mono);font-size:30px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.val{font-family:var(--f-mono);font-size:13px}
+.state-note{font-size:12.5px;color:var(--warn);font-weight:600}
+
+/* phone */
+.phoneCol{position:sticky;top:16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.phone{width:100%;max-width:372px;background:var(--phone);border-radius:46px;padding:11px;box-shadow:var(--shadow)}
+.screen{position:relative;height:690px;background:var(--app-bg);color:var(--app-ink);border-radius:36px;overflow:hidden;display:flex;flex-direction:column}
+.notch{position:absolute;left:50%;top:8px;width:84px;height:22px;transform:translateX(-50%);background:var(--phone);border-radius:14px;z-index:3}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:12px 22px 4px;font-family:var(--f-mono);font-size:12px;font-weight:500}
+.sbar span:last-child{letter-spacing:.1em}
+.appbar{padding:8px 18px 6px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.appbar h2{margin:0;font-family:var(--f-head);font-weight:700;font-size:25px;letter-spacing:.01em}
+.conn{font-size:11.5px;color:var(--app-muted);white-space:nowrap}
+.conn i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px}
+.views{flex:1;overflow-y:auto;padding:6px 14px 14px;display:flex;flex-direction:column;gap:11px;scrollbar-width:thin}
+.card{background:var(--app-card);border:1px solid var(--app-line);border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:9px}
+.card h4{margin:0;font-family:var(--f-head);font-weight:600;font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--app-muted)}
+.bigst{font-family:var(--f-head);font-weight:600;font-size:27px;line-height:1.05}
+.subst{font-size:12.5px;color:var(--app-muted);margin-top:-4px}
+.live{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.live .num{font-family:var(--f-mono);font-size:31px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1}
+.live small{font-size:11px;color:var(--app-muted);letter-spacing:.05em;text-transform:uppercase}
+.ph{display:grid;grid-template-columns:78px 1fr 84px;gap:8px;align-items:center;font-size:12.5px}
+.ph .bar{height:8px;border-radius:5px;background:var(--app-line);overflow:hidden}
+.ph .bar i{display:block;height:100%;width:0;border-radius:5px;transition:width .15s linear}
+.ph .t{font-family:var(--f-mono);font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums}
+.ph.f i{background:var(--c-feed)} .ph.s i{background:var(--c-sup)} .ph.l i{background:var(--c-liq)}
+.alert{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger);border-radius:14px;padding:10px 12px;font-size:13px;font-weight:600}
+.alert small{display:block;font-weight:400;opacity:.9}
+.next{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.next .when{font-family:var(--f-mono);font-size:22px;font-weight:500}
+.next .what{font-size:12px;color:var(--app-muted);text-align:right}
+.abtn{border:0;border-radius:14px;padding:13px 14px;font-size:15px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink);width:100%}
+.abtn.ghost{background:transparent;border:1px solid var(--app-line);color:var(--app-ink)}
+.abtn.stop{background:var(--danger);color:#fff}
+.abtn:disabled{opacity:.45;cursor:not-allowed}
+.stp{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;font-size:13.5px}
+.stp .ctrls{display:flex;align-items:center;gap:6px}
+.stp button{width:34px;height:34px;border-radius:10px;border:1px solid var(--app-line);background:var(--app-bg);font-size:18px;line-height:1;cursor:pointer}
+.stp output{min-width:64px;text-align:center;font-family:var(--f-mono);font-size:14px}
+.stocks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stock{font-size:11.5px;color:var(--app-muted);display:flex;flex-direction:column;gap:4px}
+.stock b{font-family:var(--f-mono);font-size:14px;color:var(--app-ink);font-weight:500}
+.stock .bar{height:5px;border-radius:3px;background:var(--app-line);overflow:hidden}
+.stock .bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--app-line);background:var(--app-card);padding:6px 6px 14px}
+.tabs button{border:0;background:transparent;padding:8px 4px;font-size:12px;font-weight:600;color:var(--app-muted);cursor:pointer;border-radius:10px}
+.tabs button[aria-selected="true"]{color:var(--accent);background:var(--accent-soft)}
+.sched{gap:10px}
+.sched .h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sched input[type=time]{font-family:var(--f-mono);font-size:19px;border:1px solid var(--app-line);border-radius:10px;background:var(--app-bg);color:var(--app-ink);padding:3px 6px;width:150px;min-width:0}
+.sched .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sched label{display:flex;flex-direction:column;gap:3px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--app-muted)}
+.sched input[type=number]{font-family:var(--f-mono);font-size:14px;width:100%;border:1px solid var(--app-line);border-radius:9px;background:var(--app-bg);color:var(--app-ink);padding:6px 6px}
+.sched.off{opacity:.55}
+.sw{position:relative;width:44px;height:26px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:14px;background:var(--app-line);transition:background .15s}
+.sw span::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw input:checked+span{background:var(--accent)}
+.sw input:checked+span::after{transform:translateX(18px)}
+.sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.del{border:0;background:transparent;color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;padding:6px}
+.tot{font-size:12px;color:var(--app-muted);text-align:center}
+.hist{display:flex;flex-direction:column;gap:2px;padding:10px 12px}
+.hi{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--app-line);font-size:12.5px}
+.hi:last-child{border-bottom:0}
+.hi .tm{font-family:var(--f-mono);font-weight:500}
+.hi .dd{color:var(--app-muted);text-align:right;font-size:11.5px}
+.hi .rs{grid-column:1/-1;font-family:var(--f-mono);font-size:11.5px;color:var(--app-muted)}
+.hi .rs em{font-style:normal;color:var(--warn);font-weight:600}
+.toast{position:absolute;left:14px;right:14px;bottom:78px;background:var(--app-ink);color:var(--app-bg);border-radius:14px;padding:10px 14px;font-size:13px;font-weight:500;z-index:4;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.small{font-size:12px;color:var(--muted);max-width:372px;text-align:center;margin:0}
+footer{margin-top:26px;color:var(--muted);font-size:12.5px;max-width:92ch}
+footer b{color:var(--ink)}
+@media (max-width:1020px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .phoneCol{position:static}
+  .lbl{font-size:10px}
+}
+@media (max-width:560px){
+  .hud{grid-template-columns:repeat(3,minmax(0,1fr));left:8px;right:8px;top:8px;gap:4px}
+  .chip{min-width:0;padding:3px 7px;border-radius:8px}
+  .chip small{font-size:9px;letter-spacing:.05em}
+  .chip b{font-size:12px}
+  .chip.wide b{font-size:13px}
+  .hud .chip:last-child{display:none}
+  .vbar{left:8px;right:8px;bottom:8px;gap:4px}
+  .btn.pill{padding:5px 8px;font-size:12px}
+  .tip{display:none}
+  .vp{height:clamp(480px,70vh,580px)}
+  .screen{height:660px}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Prototipo interactivo · ciclo completo de dosificación</p>
+      <h1>FeederBox</h1>
+      <p class="lede">Dispensador automático de ración, suplemento y líquido para caballo. Programa el ciclo desde la app del celular y mira cómo trabaja por dentro: rotor, cámara de pesado, mini tornillo, bomba y compuerta.</p>
+    </div>
+    <ul class="specs" aria-label="Datos del diseño">
+      <li>Tubo 4″ Ø114.3 mm</li>
+      <li>Rotor Ø107 × 85 mm · 4 aspas</li>
+      <li>Motor 4632-370 · ~12 RPM</li>
+      <li>Celda de carga + servo</li>
+    </ul>
+  </header>
+
+  <div class="grid">
+    <section class="stage" aria-label="Simulador 3D">
+      <div class="vp" id="vp">
+        <canvas id="cv" aria-label="Vista 3D interactiva de la máquina"></canvas>
+        <div class="labels" id="labels"></div>
+        <div class="hud" aria-live="off">
+          <div class="chip wide"><small>Fase</small><b id="hudPhase">En reposo</b></div>
+          <div class="chip"><small>Peso cámara</small><b id="hudW">0.0 g</b></div>
+          <div class="chip"><small>Corriente motor</small><b id="hudA">0.0 A</b></div>
+          <div class="chip"><small>Rotor</small><b id="hudRpm">0 RPM</b></div>
+          <div class="chip"><small>Comedero</small><b id="hudT">0 g</b></div>
+        </div>
+        <div class="tip">Arrastra para girar · rueda o pellizco para acercar</div>
+        <div class="vbar">
+          <button class="btn pill camBtn" data-cam="general" aria-pressed="true">General</button>
+          <button class="btn pill camBtn" data-cam="rotor" aria-pressed="false">Rotor</button>
+          <button class="btn pill camBtn" data-cam="dosif" aria-pressed="false">Suplemento y líquido</button>
+          <button class="btn pill camBtn" data-cam="camara" aria-pressed="false">Cámara de pesado</button>
+          <button class="btn pill camBtn" data-cam="comedero" aria-pressed="false">Comedero</button>
+          <span class="sp"></span>
+          <button class="btn pill" id="btnLabels" aria-pressed="true">Etiquetas</button>
+          <button class="btn pill" id="btnClosed" aria-pressed="false">Caja cerrada</button>
+        </div>
+        <div class="fallback" id="fallback" hidden>No se pudo iniciar la vista 3D en este navegador. La app y la simulación del ciclo siguen funcionando.</div>
+      </div>
+
+      <div class="sim">
+        <div class="ctl">
+          <h3>Velocidad de animación</h3>
+          <div class="seg" id="spd">
+            <button class="btn" data-spd="1" aria-pressed="false">×1 real</button>
+            <button class="btn" data-spd="2" aria-pressed="true">×2</button>
+            <button class="btn" data-spd="4" aria-pressed="false">×4</button>
+            <button class="btn" data-spd="8" aria-pressed="false">×8</button>
+          </div>
+          <div class="row"><button class="btn" id="btnPause" aria-pressed="false">Pausar</button><span class="val" id="spdNote"></span></div>
+        </div>
+        <div class="ctl">
+          <h3>Reloj RTC del equipo</h3>
+          <div class="clock" id="clk">05:55:00</div>
+          <div class="seg" id="clkRate">
+            <button class="btn" data-r="1" aria-pressed="false">×1</button>
+            <button class="btn" data-r="60" aria-pressed="true">×60</button>
+            <button class="btn" data-r="600" aria-pressed="false">×600</button>
+          </div>
+          <button class="btn" id="btnSkip">Saltar al próximo horario</button>
+        </div>
+        <div class="ctl">
+          <h3>Rotor: gramos por vuelta</h3>
+          <div class="row"><input type="range" id="gpv" min="150" max="350" step="5" value="250" aria-label="Gramos por vuelta del rotor"><span class="val" id="gpvVal">250 g</span></div>
+          <p>Calibración inicial del rotor. El ESP32 corrige con la celda de carga: cambia el valor y compara el error en el historial.</p>
+        </div>
+        <div class="ctl">
+          <h3>Pruebas</h3>
+          <div class="row">
+            <button class="btn" id="btnJam">Simular atasco</button>
+            <button class="btn" id="btnRefill">Rellenar insumos</button>
+          </div>
+          <p class="state-note" id="jamNote" hidden>Atasco armado: ocurre en la próxima ración.</p>
+          <p>El atasco mete un cubo de alfalfa entre el aspa y la pared del tubo: la corriente sube, el ESP32 lo detecta e invierte el giro.</p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="phoneCol" aria-label="App del celular">
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="sbar"><span id="pClock">05:55</span><span>WiFi ▮▮▮</span></div>
+          <div class="appbar"><h2>FeederBox</h2><span class="conn"><i></i>En línea · Cuadra 1</span></div>
+
+          <div class="views">
+            <section id="v-hoy" style="display:contents">
+              <div class="card" id="statusCard">
+                <h4>Estado</h4>
+                <div class="bigst" id="stTitle">En reposo</div>
+                <div class="subst" id="stSub">Listo para dosificar</div>
+                <div class="live"><span class="num" id="liveW">0 g</span><small>peso en la cámara</small></div>
+                <div class="ph f"><span>Alimento</span><span class="bar"><i id="bF"></i></span><span class="t" id="tF">— / — g</span></div>
+                <div class="ph s"><span>Suplemento</span><span class="bar"><i id="bS"></i></span><span class="t" id="tS">— / — g</span></div>
+                <div class="ph l"><span>Líquido</span><span class="bar"><i id="bL"></i></span><span class="t" id="tL">— / — g</span></div>
+              </div>
+              <div class="alert" id="alertBox" hidden></div>
+              <div class="card next" id="nextCard">
+                <div><h4>Próxima ración</h4><div class="when" id="nxWhen">06:00</div></div>
+                <div class="what" id="nxWhat">800 g · 20 g · 30 g<br>en 5 min</div>
+              </div>
+              <button class="abtn" id="btnManual">Dar ración ahora</button>
+              <div class="card" id="manual" hidden>
+                <h4>Ración manual</h4>
+                <div class="stp" data-k="f" data-step="50" data-min="50" data-max="2000"><span>Alimento</span><span class="ctrls"><button aria-label="Menos alimento">−</button><output>800 g</output><button aria-label="Más alimento">+</button></span></div>
+                <div class="stp" data-k="s" data-step="5" data-min="0" data-max="100"><span>Suplemento</span><span class="ctrls"><button aria-label="Menos suplemento">−</button><output>20 g</output><button aria-label="Más suplemento">+</button></span></div>
+                <div class="stp" data-k="l" data-step="5" data-min="0" data-max="100"><span>Líquido</span><span class="ctrls"><button aria-label="Menos líquido">−</button><output>30 g</output><button aria-label="Más líquido">+</button></span></div>
+                <button class="abtn" id="btnStart">Iniciar ciclo</button>
+              </div>
+              <button class="abtn stop" id="btnStop" hidden>Detener y servir lo pesado</button>
+              <div class="card">
+                <h4>Insumos</h4>
+                <div class="stocks">
+                  <div class="stock"><span>Tolva</span><b id="kHop">7.2 kg</b><span class="bar"><i id="kHopB"></i></span></div>
+                  <div class="stock"><span>Suplemento</span><b id="kSup">500 g</b><span class="bar"><i id="kSupB"></i></span></div>
+                  <div class="stock"><span>Líquido</span><b id="kLiq">1000 g</b><span class="bar"><i id="kLiqB"></i></span></div>
+                </div>
+              </div>
+            </section>
+
+            <section id="v-prog" style="display:none">
+              <div id="schedList" style="display:contents"></div>
+              <button class="abtn ghost" id="btnAdd">+ Agregar horario</button>
+              <div class="tot" id="schedTot"></div>
+            </section>
+
+            <section id="v-hist" style="display:none">
+              <div class="card hist" id="histList"></div>
+              <div class="tot">Incluye datos de ejemplo y los ciclos de esta sesión.</div>
+            </section>
+          </div>
+
+          <nav class="tabs" role="tablist" aria-label="Secciones de la app">
+            <button role="tab" data-tab="hoy" aria-selected="true">Hoy</button>
+            <button role="tab" data-tab="prog" aria-selected="false">Programa</button>
+            <button role="tab" data-tab="hist" aria-selected="false">Historial</button>
+          </nav>
+          <div class="toast" id="toast" role="status"></div>
+        </div>
+      </div>
+      <p class="small">Esta app es una maqueta: manda las mismas órdenes que mandaría el celular al ESP32 (horarios, ración, suplemento y líquido).</p>
+    </aside>
+  </div>
+
+  <footer>
+    <p><b>Cómo se dosifica.</b> El <b>alimento</b> cae de la tolva por el tubo y el rotor de 4 aspas lo libera por bolsillos (~250 g por vuelta); el ESP32 cuenta vueltas y confirma con la celda de carga. El <b>suplemento</b> en polvo lo entrega un mini tornillo y se corta por <b>peso ganado</b> en la cámara; el <b>líquido</b> lo mueve una bomba peristáltica y se corta por <b>peso perdido</b> en la botella. Con todo pesado, el servo abre la compuerta y la ración cae al comedero. Los gramos de cada partícula son macro-partículas de 5 g (alimento), 0.5 g (polvo y gotas); la física es ilustrativa, no una medición.</p>
+  </footer>
+</div>

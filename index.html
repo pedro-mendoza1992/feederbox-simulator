@@ -1,0 +1,1225 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FeederBox Simulador</title>
+<meta name="description" content="Simulador 3D interactivo del dispensador automático de alimento FeederBox.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231e6b57'/%3E%3Cpath d='M9 8h14l-3 7h-8zM13 17h6v7h-6z' fill='%23fff'/%3E%3C/svg%3E">
+<style>:root{color-scheme:light;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#efebe0; --surface:#faf8f2; --ink:#262420; --muted:#6b6557; --line:#d8d1be; --line-soft:#e7e1d1;
+  --accent:#1e6b57; --accent-ink:#ffffff; --accent-soft:#d8eadf;
+  --warn:#a45a12; --warn-soft:#f6e4cc; --danger:#b3321f; --danger-soft:#f6dad4; --ok:#2c7a3f;
+  --scene-a:#ebe5d4; --scene-b:#cbc1a6; --wall-tint:#d6cdbb; --pill:rgba(255,253,247,.86);
+  --app-bg:#f5f2e9; --app-card:#ffffff; --app-line:#e3ddcc; --app-ink:#262420; --app-muted:#6b6557;
+  --c-feed:#9a6a2a; --c-sup:#7a8794; --c-liq:#c98a14;
+  --phone:#17191c; --shadow:0 18px 40px -18px rgba(40,34,20,.45);
+  --f-head:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+  --f-body:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141512; --surface:#1d1f1b; --ink:#ece8dc; --muted:#a09a89; --line:#34372f; --line-soft:#2a2c26;
+    --accent:#5fc2a0; --accent-ink:#0d1f19; --accent-soft:#1f3a31;
+    --warn:#e0a35a; --warn-soft:#3a2c18; --danger:#f08a78; --danger-soft:#43211b; --ok:#7ccf8d;
+    --scene-a:#23251f; --scene-b:#12130f; --wall-tint:#5c5950; --pill:rgba(29,31,27,.86);
+    --app-bg:#1a1c18; --app-card:#242722; --app-line:#363a32; --app-ink:#ece8dc; --app-muted:#a09a89;
+    --c-feed:#c8923f; --c-sup:#9fb0bf; --c-liq:#e3a62a;
+    --phone:#050505; --shadow:0 18px 40px -18px rgba(0,0,0,.8);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141512; --surface:#1d1f1b; --ink:#ece8dc; --muted:#a09a89; --line:#34372f; --line-soft:#2a2c26;
+  --accent:#5fc2a0; --accent-ink:#0d1f19; --accent-soft:#1f3a31;
+  --warn:#e0a35a; --warn-soft:#3a2c18; --danger:#f08a78; --danger-soft:#43211b; --ok:#7ccf8d;
+  --scene-a:#23251f; --scene-b:#12130f; --wall-tint:#5c5950; --pill:rgba(29,31,27,.86);
+  --app-bg:#1a1c18; --app-card:#242722; --app-line:#363a32; --app-ink:#ece8dc; --app-muted:#a09a89;
+  --c-feed:#c8923f; --c-sup:#9fb0bf; --c-liq:#e3a62a;
+  --phone:#050505; --shadow:0 18px 40px -18px rgba(0,0,0,.8);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:22px 40px}
+button{font-family:inherit;color:inherit}
+.wrap{max-width:1260px;margin-inline:auto}
+.top{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+.eyebrow{margin:0 0 2px;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font-family:var(--f-head);font-weight:700;font-size:clamp(34px,5vw,52px);line-height:1;letter-spacing:.01em}
+.lede{margin:6px 0 0;max-width:62ch;color:var(--muted)}
+.specs{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.specs li{font-family:var(--f-mono);font-size:11.5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:26px;align-items:start}
+.stage{min-width:0;display:flex;flex-direction:column;gap:14px}
+
+/* viewport 3D */
+.vp{position:relative;height:clamp(420px,68vh,700px);border:1px solid var(--line);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,var(--scene-a),var(--scene-b))}
+.vp canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.vp canvas:active{cursor:grabbing}
+.hud{position:absolute;left:10px;top:10px;display:grid;grid-template-columns:repeat(2,minmax(0,auto));gap:6px;pointer-events:none}
+.chip{background:var(--pill);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px;padding:5px 10px;min-width:104px}
+.chip small{display:block;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.chip b{display:block;font-family:var(--f-mono);font-weight:500;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip.wide{grid-column:1/-1}
+.vbar{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.vbar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:500;cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"],.btn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.pill{background:var(--pill);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.btn.pill[aria-pressed="true"]{background:var(--accent)}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;transform:translate(8px,-50%);white-space:nowrap;font-size:11px;font-weight:600;letter-spacing:.02em;background:var(--pill);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.lbl::before{content:"";position:absolute;left:-9px;top:50%;width:8px;height:1px;background:var(--muted)}
+.lbl::after{content:"";position:absolute;left:-12px;top:calc(50% - 2.5px);width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.lbl.l{transform:translate(calc(-100% - 8px),-50%)}
+.lbl.l::before{left:auto;right:-9px}
+.lbl.l::after{left:auto;right:-12px}
+.fallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+.tip{position:absolute;right:12px;top:12px;font-size:11.5px;color:var(--muted);background:var(--pill);border-radius:8px;padding:4px 9px;pointer-events:none}
+
+/* sim panel */
+.sim{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.ctl h3{margin:0;font-family:var(--f-head);font-weight:600;font-size:15px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.ctl p{margin:0;font-size:12.5px;color:var(--muted)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg .btn{padding:6px 10px;flex:1 0 auto;text-align:center}
+.clock{font-family:var(--f-mono);font-size:30px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.val{font-family:var(--f-mono);font-size:13px}
+.state-note{font-size:12.5px;color:var(--warn);font-weight:600}
+
+/* phone */
+.phoneCol{position:sticky;top:16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.phone{width:100%;max-width:372px;background:var(--phone);border-radius:46px;padding:11px;box-shadow:var(--shadow)}
+.screen{position:relative;height:690px;background:var(--app-bg);color:var(--app-ink);border-radius:36px;overflow:hidden;display:flex;flex-direction:column}
+.notch{position:absolute;left:50%;top:8px;width:84px;height:22px;transform:translateX(-50%);background:var(--phone);border-radius:14px;z-index:3}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:12px 22px 4px;font-family:var(--f-mono);font-size:12px;font-weight:500}
+.sbar span:last-child{letter-spacing:.1em}
+.appbar{padding:8px 18px 6px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.appbar h2{margin:0;font-family:var(--f-head);font-weight:700;font-size:25px;letter-spacing:.01em}
+.conn{font-size:11.5px;color:var(--app-muted);white-space:nowrap}
+.conn i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px}
+.views{flex:1;overflow-y:auto;padding:6px 14px 14px;display:flex;flex-direction:column;gap:11px;scrollbar-width:thin}
+.card{background:var(--app-card);border:1px solid var(--app-line);border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:9px}
+.card h4{margin:0;font-family:var(--f-head);font-weight:600;font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--app-muted)}
+.bigst{font-family:var(--f-head);font-weight:600;font-size:27px;line-height:1.05}
+.subst{font-size:12.5px;color:var(--app-muted);margin-top:-4px}
+.live{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.live .num{font-family:var(--f-mono);font-size:31px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1}
+.live small{font-size:11px;color:var(--app-muted);letter-spacing:.05em;text-transform:uppercase}
+.ph{display:grid;grid-template-columns:78px 1fr 84px;gap:8px;align-items:center;font-size:12.5px}
+.ph .bar{height:8px;border-radius:5px;background:var(--app-line);overflow:hidden}
+.ph .bar i{display:block;height:100%;width:0;border-radius:5px;transition:width .15s linear}
+.ph .t{font-family:var(--f-mono);font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums}
+.ph.f i{background:var(--c-feed)} .ph.s i{background:var(--c-sup)} .ph.l i{background:var(--c-liq)}
+.alert{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger);border-radius:14px;padding:10px 12px;font-size:13px;font-weight:600}
+.alert small{display:block;font-weight:400;opacity:.9}
+.next{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.next .when{font-family:var(--f-mono);font-size:22px;font-weight:500}
+.next .what{font-size:12px;color:var(--app-muted);text-align:right}
+.abtn{border:0;border-radius:14px;padding:13px 14px;font-size:15px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink);width:100%}
+.abtn.ghost{background:transparent;border:1px solid var(--app-line);color:var(--app-ink)}
+.abtn.stop{background:var(--danger);color:#fff}
+.abtn:disabled{opacity:.45;cursor:not-allowed}
+.stp{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;font-size:13.5px}
+.stp .ctrls{display:flex;align-items:center;gap:6px}
+.stp button{width:34px;height:34px;border-radius:10px;border:1px solid var(--app-line);background:var(--app-bg);font-size:18px;line-height:1;cursor:pointer}
+.stp output{min-width:64px;text-align:center;font-family:var(--f-mono);font-size:14px}
+.stocks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stock{font-size:11.5px;color:var(--app-muted);display:flex;flex-direction:column;gap:4px}
+.stock b{font-family:var(--f-mono);font-size:14px;color:var(--app-ink);font-weight:500}
+.stock .bar{height:5px;border-radius:3px;background:var(--app-line);overflow:hidden}
+.stock .bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--app-line);background:var(--app-card);padding:6px 6px 14px}
+.tabs button{border:0;background:transparent;padding:8px 4px;font-size:12px;font-weight:600;color:var(--app-muted);cursor:pointer;border-radius:10px}
+.tabs button[aria-selected="true"]{color:var(--accent);background:var(--accent-soft)}
+.sched{gap:10px}
+.sched .h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sched input[type=time]{font-family:var(--f-mono);font-size:19px;border:1px solid var(--app-line);border-radius:10px;background:var(--app-bg);color:var(--app-ink);padding:3px 6px;width:150px;min-width:0}
+.sched .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sched label{display:flex;flex-direction:column;gap:3px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--app-muted)}
+.sched input[type=number]{font-family:var(--f-mono);font-size:14px;width:100%;border:1px solid var(--app-line);border-radius:9px;background:var(--app-bg);color:var(--app-ink);padding:6px 6px}
+.sched.off{opacity:.55}
+.sw{position:relative;width:44px;height:26px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:14px;background:var(--app-line);transition:background .15s}
+.sw span::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw input:checked+span{background:var(--accent)}
+.sw input:checked+span::after{transform:translateX(18px)}
+.sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.del{border:0;background:transparent;color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;padding:6px}
+.tot{font-size:12px;color:var(--app-muted);text-align:center}
+.hist{display:flex;flex-direction:column;gap:2px;padding:10px 12px}
+.hi{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--app-line);font-size:12.5px}
+.hi:last-child{border-bottom:0}
+.hi .tm{font-family:var(--f-mono);font-weight:500}
+.hi .dd{color:var(--app-muted);text-align:right;font-size:11.5px}
+.hi .rs{grid-column:1/-1;font-family:var(--f-mono);font-size:11.5px;color:var(--app-muted)}
+.hi .rs em{font-style:normal;color:var(--warn);font-weight:600}
+.toast{position:absolute;left:14px;right:14px;bottom:78px;background:var(--app-ink);color:var(--app-bg);border-radius:14px;padding:10px 14px;font-size:13px;font-weight:500;z-index:4;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.small{font-size:12px;color:var(--muted);max-width:372px;text-align:center;margin:0}
+footer{margin-top:26px;color:var(--muted);font-size:12.5px;max-width:92ch}
+footer b{color:var(--ink)}
+@media (max-width:1020px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .phoneCol{position:static}
+  .lbl{font-size:10px}
+}
+@media (max-width:560px){
+  .hud{grid-template-columns:repeat(3,minmax(0,1fr));left:8px;right:8px;top:8px;gap:4px}
+  .chip{min-width:0;padding:3px 7px;border-radius:8px}
+  .chip small{font-size:9px;letter-spacing:.05em}
+  .chip b{font-size:12px}
+  .chip.wide b{font-size:13px}
+  .hud .chip:last-child{display:none}
+  .vbar{left:8px;right:8px;bottom:8px;gap:4px}
+  .btn.pill{padding:5px 8px;font-size:12px}
+  .tip{display:none}
+  .vp{height:clamp(480px,70vh,580px)}
+  .screen{height:660px}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Prototipo interactivo · ciclo completo de dosificación</p>
+      <h1>FeederBox</h1>
+      <p class="lede">Dispensador automático de ración, suplemento y líquido para caballo. Programa el ciclo desde la app del celular y mira cómo trabaja por dentro: rotor, cámara de pesado, mini tornillo, bomba y compuerta.</p>
+    </div>
+    <ul class="specs" aria-label="Datos del diseño">
+      <li>Tubo 4″ Ø114.3 mm</li>
+      <li>Rotor Ø107 × 85 mm · 4 aspas</li>
+      <li>Motor 4632-370 · ~12 RPM</li>
+      <li>Celda de carga + servo</li>
+    </ul>
+  </header>
+
+  <div class="grid">
+    <section class="stage" aria-label="Simulador 3D">
+      <div class="vp" id="vp">
+        <canvas id="cv" aria-label="Vista 3D interactiva de la máquina"></canvas>
+        <div class="labels" id="labels"></div>
+        <div class="hud" aria-live="off">
+          <div class="chip wide"><small>Fase</small><b id="hudPhase">En reposo</b></div>
+          <div class="chip"><small>Peso cámara</small><b id="hudW">0.0 g</b></div>
+          <div class="chip"><small>Corriente motor</small><b id="hudA">0.0 A</b></div>
+          <div class="chip"><small>Rotor</small><b id="hudRpm">0 RPM</b></div>
+          <div class="chip"><small>Comedero</small><b id="hudT">0 g</b></div>
+        </div>
+        <div class="tip">Arrastra para girar · rueda o pellizco para acercar</div>
+        <div class="vbar">
+          <button class="btn pill camBtn" data-cam="general" aria-pressed="true">General</button>
+          <button class="btn pill camBtn" data-cam="rotor" aria-pressed="false">Rotor</button>
+          <button class="btn pill camBtn" data-cam="dosif" aria-pressed="false">Suplemento y líquido</button>
+          <button class="btn pill camBtn" data-cam="camara" aria-pressed="false">Cámara de pesado</button>
+          <button class="btn pill camBtn" data-cam="comedero" aria-pressed="false">Comedero</button>
+          <span class="sp"></span>
+          <button class="btn pill" id="btnLabels" aria-pressed="true">Etiquetas</button>
+          <button class="btn pill" id="btnClosed" aria-pressed="false">Caja cerrada</button>
+        </div>
+        <div class="fallback" id="fallback" hidden>No se pudo iniciar la vista 3D en este navegador. La app y la simulación del ciclo siguen funcionando.</div>
+      </div>
+
+      <div class="sim">
+        <div class="ctl">
+          <h3>Velocidad de animación</h3>
+          <div class="seg" id="spd">
+            <button class="btn" data-spd="1" aria-pressed="false">×1 real</button>
+            <button class="btn" data-spd="2" aria-pressed="true">×2</button>
+            <button class="btn" data-spd="4" aria-pressed="false">×4</button>
+            <button class="btn" data-spd="8" aria-pressed="false">×8</button>
+          </div>
+          <div class="row"><button class="btn" id="btnPause" aria-pressed="false">Pausar</button><span class="val" id="spdNote"></span></div>
+        </div>
+        <div class="ctl">
+          <h3>Reloj RTC del equipo</h3>
+          <div class="clock" id="clk">05:55:00</div>
+          <div class="seg" id="clkRate">
+            <button class="btn" data-r="1" aria-pressed="false">×1</button>
+            <button class="btn" data-r="60" aria-pressed="true">×60</button>
+            <button class="btn" data-r="600" aria-pressed="false">×600</button>
+          </div>
+          <button class="btn" id="btnSkip">Saltar al próximo horario</button>
+        </div>
+        <div class="ctl">
+          <h3>Rotor: gramos por vuelta</h3>
+          <div class="row"><input type="range" id="gpv" min="150" max="350" step="5" value="250" aria-label="Gramos por vuelta del rotor"><span class="val" id="gpvVal">250 g</span></div>
+          <p>Calibración inicial del rotor. El ESP32 corrige con la celda de carga: cambia el valor y compara el error en el historial.</p>
+        </div>
+        <div class="ctl">
+          <h3>Pruebas</h3>
+          <div class="row">
+            <button class="btn" id="btnJam">Simular atasco</button>
+            <button class="btn" id="btnRefill">Rellenar insumos</button>
+          </div>
+          <p class="state-note" id="jamNote" hidden>Atasco armado: ocurre en la próxima ración.</p>
+          <p>El atasco mete un cubo de alfalfa entre el aspa y la pared del tubo: la corriente sube, el ESP32 lo detecta e invierte el giro.</p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="phoneCol" aria-label="App del celular">
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="sbar"><span id="pClock">05:55</span><span>WiFi ▮▮▮</span></div>
+          <div class="appbar"><h2>FeederBox</h2><span class="conn"><i></i>En línea · Cuadra 1</span></div>
+
+          <div class="views">
+            <section id="v-hoy" style="display:contents">
+              <div class="card" id="statusCard">
+                <h4>Estado</h4>
+                <div class="bigst" id="stTitle">En reposo</div>
+                <div class="subst" id="stSub">Listo para dosificar</div>
+                <div class="live"><span class="num" id="liveW">0 g</span><small>peso en la cámara</small></div>
+                <div class="ph f"><span>Alimento</span><span class="bar"><i id="bF"></i></span><span class="t" id="tF">— / — g</span></div>
+                <div class="ph s"><span>Suplemento</span><span class="bar"><i id="bS"></i></span><span class="t" id="tS">— / — g</span></div>
+                <div class="ph l"><span>Líquido</span><span class="bar"><i id="bL"></i></span><span class="t" id="tL">— / — g</span></div>
+              </div>
+              <div class="alert" id="alertBox" hidden></div>
+              <div class="card next" id="nextCard">
+                <div><h4>Próxima ración</h4><div class="when" id="nxWhen">06:00</div></div>
+                <div class="what" id="nxWhat">800 g · 20 g · 30 g<br>en 5 min</div>
+              </div>
+              <button class="abtn" id="btnManual">Dar ración ahora</button>
+              <div class="card" id="manual" hidden>
+                <h4>Ración manual</h4>
+                <div class="stp" data-k="f" data-step="50" data-min="50" data-max="2000"><span>Alimento</span><span class="ctrls"><button aria-label="Menos alimento">−</button><output>800 g</output><button aria-label="Más alimento">+</button></span></div>
+                <div class="stp" data-k="s" data-step="5" data-min="0" data-max="100"><span>Suplemento</span><span class="ctrls"><button aria-label="Menos suplemento">−</button><output>20 g</output><button aria-label="Más suplemento">+</button></span></div>
+                <div class="stp" data-k="l" data-step="5" data-min="0" data-max="100"><span>Líquido</span><span class="ctrls"><button aria-label="Menos líquido">−</button><output>30 g</output><button aria-label="Más líquido">+</button></span></div>
+                <button class="abtn" id="btnStart">Iniciar ciclo</button>
+              </div>
+              <button class="abtn stop" id="btnStop" hidden>Detener y servir lo pesado</button>
+              <div class="card">
+                <h4>Insumos</h4>
+                <div class="stocks">
+                  <div class="stock"><span>Tolva</span><b id="kHop">7.2 kg</b><span class="bar"><i id="kHopB"></i></span></div>
+                  <div class="stock"><span>Suplemento</span><b id="kSup">500 g</b><span class="bar"><i id="kSupB"></i></span></div>
+                  <div class="stock"><span>Líquido</span><b id="kLiq">1000 g</b><span class="bar"><i id="kLiqB"></i></span></div>
+                </div>
+              </div>
+            </section>
+
+            <section id="v-prog" style="display:none">
+              <div id="schedList" style="display:contents"></div>
+              <button class="abtn ghost" id="btnAdd">+ Agregar horario</button>
+              <div class="tot" id="schedTot"></div>
+            </section>
+
+            <section id="v-hist" style="display:none">
+              <div class="card hist" id="histList"></div>
+              <div class="tot">Incluye datos de ejemplo y los ciclos de esta sesión.</div>
+            </section>
+          </div>
+
+          <nav class="tabs" role="tablist" aria-label="Secciones de la app">
+            <button role="tab" data-tab="hoy" aria-selected="true">Hoy</button>
+            <button role="tab" data-tab="prog" aria-selected="false">Programa</button>
+            <button role="tab" data-tab="hist" aria-selected="false">Historial</button>
+          </nav>
+          <div class="toast" id="toast" role="status"></div>
+        </div>
+      </div>
+      <p class="small">Esta app es una maqueta: manda las mismas órdenes que mandaría el celular al ESP32 (horarios, ración, suplemento y líquido).</p>
+    </aside>
+  </div>
+
+  <footer>
+    <p><b>Cómo se dosifica.</b> El <b>alimento</b> cae de la tolva por el tubo y el rotor de 4 aspas lo libera por bolsillos (~250 g por vuelta); el ESP32 cuenta vueltas y confirma con la celda de carga. El <b>suplemento</b> en polvo lo entrega un mini tornillo y se corta por <b>peso ganado</b> en la cámara; el <b>líquido</b> lo mueve una bomba peristáltica y se corta por <b>peso perdido</b> en la botella. Con todo pesado, el servo abre la compuerta y la ración cae al comedero. Los gramos de cada partícula son macro-partículas de 5 g (alimento), 0.5 g (polvo y gotas); la física es ilustrativa, no una medición.</p>
+  </footer>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script>
+(function(){'use strict';
+/* ============================================================
+   FeederBox — lógica del ciclo (unidades: cm, g, s)
+   ============================================================ */
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const gauss=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v)};
+const approach=(v,t,d)=>v<t?Math.min(t,v+d):Math.max(t,v-d);
+const TAU=Math.PI*2, HP=Math.PI/2;
+
+/* geometría (cm) */
+const R_OUT=5.715, R_IN=5.56;
+const G=18, CH_H=18, FUN_H=4, CH_R=7.8;
+const TUBE_Y0=44, TUBE_Y1=80, ROTOR_Y=63;
+const BOX_Y0=50, BOX_Y1=75;
+const SX=-6.6, SZ=3.6, SY=55.5;           // salida del mini tornillo
+const NZX=3.5, NZZ=6.0, NZY=46.8;          // boquilla del líquido
+const GRAV=160;                            // gravedad "visual" (más lenta que la real)
+const RHO=0.65;                            // g/cm³ alimento
+const CH_AREA=Math.PI*CH_R*CH_R;
+const W_ROT=12*TAU/60;                     // 12 RPM
+const HOP_CYL_AREA=Math.PI*14*14, CONE_G=1260, HOP_CAP=9260;
+
+const S={
+  phase:'idle', pt:0, t:0,
+  clock:5*3600+55*60, clockRate:60, speed:2, paused:false,
+  gpv:250, stock:7200, sup:500, liq:1000,
+  plan:null, cyc:null, res:null, last:null,
+  chP:0, chS:0, chL:0, flyP:0, flyS:0, flyL:0, flyD:0, trM:0,
+  th:0, thMax:0, th0:0, w:0, kq:1, qIdx:0, accP:0, rotorStop:false, shake:0,
+  augA:0, wa:0, accS:0, suppStarted:false, suppBase:0, suppStop:false,
+  pumpA:0, wp:0, accL:0, liqStarted:false, liqEm:0, liqStop:false, coast:0, coastT:0,
+  gate:0, gateT:0, gMode:0, gt:0, accD:0, eatWait:0,
+  curA:0, wDisp:0, jamArmed:false, jamS:null, alertMsg:'',
+  cube:{on:false,mode:'',t:0,x:0,y:0,z:0,vy:0,rx:0,ry:0,rz:0}
+};
+const parts=[];
+const UI={toast(){},hist(){},sched(){}};
+const HIST=[
+  {day:'Ayer',time:'18:00',p:{f:800,s:20,l:30},r:{f:803,s:20.4,l:30.2},jams:0},
+  {day:'Ayer',time:'12:00',p:{f:600,s:0,l:20},r:{f:598,s:0,l:20.3},jams:0},
+  {day:'Ayer',time:'06:00',p:{f:800,s:20,l:30},r:{f:794,s:19.8,l:30.1},jams:0}
+];
+let SCHED=[
+  {id:1,t:'06:00',f:800,s:20,l:30,on:true},
+  {id:2,t:'12:00',f:600,s:0,l:20,on:true},
+  {id:3,t:'18:00',f:800,s:20,l:30,on:true}
+];
+const toSec=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1])*3600+(+m[2])*60:0};
+const pad=n=>String(n).padStart(2,'0');
+const fmtT=sec=>{sec=Math.floor(sec%86400);return pad(Math.floor(sec/3600))+':'+pad(Math.floor(sec%3600/60))};
+const fmtTS=sec=>{sec=Math.floor(sec%86400);return pad(Math.floor(sec/3600))+':'+pad(Math.floor(sec%3600/60))+':'+pad(sec%60)};
+function resetFired(sc){const tod=S.clock%86400,day=Math.floor(S.clock/86400);sc.sec=toSec(sc.t);sc.fired=(tod>=sc.sec)?day:-1}
+try{
+  const raw=localStorage.getItem('feederbox-sched-v2');
+  if(raw){const a=JSON.parse(raw);if(Array.isArray(a)&&a.length&&a.length<=6){SCHED=a.map((x,i)=>({id:i+1,t:/^\d\d:\d\d$/.test(x.t)?x.t:'06:00',f:clamp(+x.f||0,0,2000),s:clamp(+x.s||0,0,100),l:clamp(+x.l||0,0,100),on:!!x.on}))}}
+}catch(e){}
+SCHED.forEach(resetFired);
+function saveSched(){try{localStorage.setItem('feederbox-sched-v2',JSON.stringify(SCHED.map(({t,f,s,l,on})=>({t,f,s,l,on}))))}catch(e){}}
+
+const chT=()=>S.chP+S.chS+S.chL;
+const chH=()=>chT()/(RHO*CH_AREA);
+function troughShape(){const V=S.trM/RHO,f=V/1201;const sq=Math.sqrt(Math.min(1,f));return{rx:Math.max(0.01,17*sq),rz:Math.max(0.01,7.5*sq),h:f<=0?0:(f>1?3*f:3)}}
+const hopLevel=()=>Math.max(0,(S.stock-CONE_G)/(HOP_CYL_AREA*RHO));
+
+/* ---------- partículas ---------- */
+function spawnPart(k,x,y,z,m,dest,vx,vy,vz,delay){
+  parts.push({k,x,y,z,vx:vx||0,vy:vy||0,vz:vz||0,m,dest,delay:delay||0,rot:rnd(0,6),vr:rnd(-6,6),c:(Math.random()*4)|0});
+  if(k==='p'&&dest==='ch'){S.flyP+=m;S.stock-=m}
+  else if(k==='s'){S.flyS+=m;S.sup-=m}
+  else if(k==='l'){S.flyL+=m;S.liq-=m}
+  else if(k==='d'){S.flyD+=m}
+}
+function land(p){
+  if(p.k==='p'&&p.dest==='ch'){S.flyP-=p.m;S.chP+=p.m}
+  else if(p.k==='s'){S.flyS-=p.m;S.chS+=p.m}
+  else if(p.k==='l'){S.flyL-=p.m;S.chL+=p.m}
+  else if(p.k==='d'){S.flyD-=p.m;S.trM+=p.m}
+}
+function stepParts(dt){
+  const chTop=G+0.4+chH();
+  const ts=troughShape(),trTop=0.5+ts.h*0.8;
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];
+    if(p.delay>0){p.delay-=dt;continue}
+    p.vy-=GRAV*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.rot+=p.vr*dt;
+    if(p.dest==='ch'){
+      const lim=p.y>TUBE_Y0?(p.k==='p'?R_IN-0.45:9):CH_R-0.4;
+      const r=Math.hypot(p.x,p.z);
+      if(r>lim&&p.k==='p'){p.x*=lim/r;p.z*=lim/r;p.vx*=-0.3;p.vz*=-0.3}
+      if(p.y<=chTop){land(p);parts.splice(i,1)}
+    }else if(p.y<=trTop){land(p);parts.splice(i,1)}
+  }
+}
+
+/* ---------- ciclo ---------- */
+function setPhase(p){S.phase=p;S.pt=0}
+function needs(ph){const pl=S.plan;if(!pl)return false;return ph==='rotor'?pl.f>0:ph==='supp'?pl.s>0:ph==='liq'?pl.l>0:true}
+const ORDER=['tare','rotor','supp','liq','settle','gate'];
+function goNext(cur){
+  let i=ORDER.indexOf(cur)+1;
+  while(i<ORDER.length&&!needs(ORDER[i]))i++;
+  const nx=ORDER[i]||'gate';
+  setPhase(nx);
+  if(nx==='rotor'){S.rotorStop=false;S.th0=S.th;S.thMax=Math.max(S.thMax,S.th);S.accP=0}
+  if(nx==='supp'){S.suppStarted=false;S.suppStop=false;S.accS=0}
+  if(nx==='liq'){S.liqStarted=false;S.liqStop=false;S.accL=0;S.liqEm=0}
+  if(nx==='gate'){S.gMode=0}
+}
+function startCycle(f,s,l,src){
+  if(S.phase!=='idle')return false;
+  f=clamp(Math.round(f),0,2000);s=clamp(+s||0,0,100);l=clamp(+l||0,0,100);
+  if(f+s+l<=0){UI.toast('Configura al menos un gramo para dosificar');return false}
+  if(S.stock<f+40){UI.toast('Tolva casi vacía: rellénala para esta ración');return false}
+  if(S.sup<s+5){UI.toast('Falta suplemento en la mini tolva');return false}
+  if(S.liq<l+5){UI.toast('Falta líquido en la botella');return false}
+  S.plan={f,s,l,src:src||'manual'};
+  S.cyc={t0:S.clock,jams:0,ts:S.t};
+  S.res=null;S.abortFlag=false;
+  setPhase('tare');
+  return true;
+}
+function abortCycle(){
+  if(!S.plan||S.phase==='idle'||S.phase==='gate'||S.phase==='done')return;
+  S.rotorStop=true;S.suppStop=true;S.liqStop=true;S.jamS=null;S.cube.on=false;S.alertMsg='';
+  S.w=0;S.wa=0;S.wp=0;S.coast=0;
+  if(S.cube.on){if(S.cube.mode==='release'){S.flyP-=20;S.chP+=20}S.cube.on=false}
+  S.abortFlag=true;
+  setPhase('settle');S.pt=1.2;
+}
+function finishCycle(){
+  const r=S.res||{f:S.chP,s:S.chS,l:S.chL};
+  HIST.unshift({day:'Hoy',time:fmtT(S.cyc.t0),p:{f:S.plan.f,s:S.plan.s,l:S.plan.l},r:{f:r.f,s:r.s,l:r.l},jams:S.cyc.jams,aborted:!!r.aborted,sim:true});
+  if(HIST.length>40)HIST.pop();
+  S.last={p:S.plan,r:r};
+  S.eatWait=3.5;
+  setPhase('done');
+  UI.hist();
+  UI.toast(r.aborted?'Ciclo detenido. Se sirvió '+Math.round(r.f+r.s+r.l)+' g':'Ración servida: '+Math.round(r.f)+' g'+(S.plan.s?' + '+r.s.toFixed(1)+' g supl.':'')+(S.plan.l?' + '+r.l.toFixed(1)+' g líq.':''));
+}
+
+/* rotor + atasco */
+function emitRotor(dth){
+  const prev=S.th;S.th+=dth;
+  const gain=Math.max(0,S.th-Math.max(prev,S.thMax));
+  S.thMax=Math.max(S.thMax,S.th);
+  if(gain<=0)return;
+  const q=Math.floor(S.th/HP);
+  if(q!==S.qIdx){S.qIdx=q;S.kq=1+0.06*gauss()}
+  S.accP+=(S.gpv/TAU)*(1+0.8*Math.cos(4*S.th+0.6))*S.kq*gain;
+  while(S.accP>=5){
+    S.accP-=5;
+    spawnPart('p',rnd(-3.4,3.4),ROTOR_Y-4.2,rnd(-1.9,1.9),5,'ch',rnd(-4,4),-rnd(0,10),rnd(-3,3),rnd(0,0.15));
+  }
+}
+function spawnCube(){
+  const c=S.cube;c.on=true;c.mode='fall';c.t=0;c.x=0.2;c.y=ROTOR_Y+11;c.z=1.9;c.rx=rnd(0,1);c.ry=rnd(0,1);c.rz=rnd(-.4,.4);
+}
+function doRotor(dt){
+  const alpha=8,c=S.cube;
+  if(c.on&&c.mode==='fall'){
+    c.t+=dt;const u=clamp(c.t/0.6,0,1);c.y=ROTOR_Y+11-(6.4*u*u);
+    S.th+=0; // el rotor sigue girando mientras el cubo cae
+    if(u>=1){
+      c.mode='stuck';
+      let thS=Math.floor(S.th/HP)*HP+0.3;while(thS<S.th+0.3)thS+=HP;
+      S.jamS={mode:'stall',t:0,thS:thS,hi:0};
+    }
+  }
+  if(S.jamS){rotorJam(dt);return}
+  if(S.jamArmed&&!c.on&&S.th-S.th0>1.2&&!S.rotorStop)spawnCube();
+  if(!S.rotorStop){
+    const coastM=(S.w*S.w/(2*alpha))*S.gpv/TAU;
+    if(S.chP+S.flyP+coastM>=S.plan.f&&!c.on)S.rotorStop=true;
+    if(S.stock<=1){S.rotorStop=true;S.alertMsg='Tolva vacía';UI.toast('La tolva se quedó sin alimento')}
+  }
+  S.wT=S.rotorStop?0:W_ROT;
+  S.w=approach(S.w,S.wT,alpha*dt);
+  emitRotor(S.w*dt);
+  S.curA=approach(S.curA,2.3+0.25*Math.sin(S.t*9),12*dt);
+  if(S.rotorStop&&S.w<0.02&&!c.on){S.w=0;goNext('rotor')}
+}
+function rotorJam(dt){
+  const j=S.jamS,c=S.cube;j.t+=dt;
+  if(j.mode==='stall'){
+    S.w=approach(S.w,W_ROT,8*dt);
+    const nth=S.th+S.w*dt;
+    if(nth>=j.thS){S.th=j.thS;S.w=0;S.shake=0.025;S.curA=approach(S.curA,5.9,9*dt)}
+    else{emitRotor(S.w*dt);S.curA=approach(S.curA,3.0,6*dt)}
+    if(S.curA>4.8)j.hi+=dt;
+    if(j.hi>0.5){j.mode='detect';j.t=0;S.shake=0;S.cyc.jams++;S.alertMsg='Atasco detectado';j.thD=S.th}
+  }else if(j.mode==='detect'){
+    S.w=0;S.curA=approach(S.curA,0,14*dt);
+    if(j.t>0.9){j.mode='rev';j.t=0;j.rel=false}
+  }else if(j.mode==='rev'){
+    S.w=-W_ROT*1.1;S.th+=S.w*dt;S.curA=approach(S.curA,3.2,10*dt);
+    if(!j.rel&&S.th<j.thD-0.9){j.rel=true;c.mode='release';c.vy=0;S.flyP+=20;S.stock-=20}
+    if(S.th<=j.thD-2.5){S.w=0;j.mode='pause';j.t=0}
+  }else if(j.mode==='pause'){
+    S.curA=approach(S.curA,0,8*dt);
+    if(j.t>0.8){S.jamS=null;S.jamArmed=false;S.alertMsg='';UI.toast('Atasco resuelto: el rotor invirtió el giro y retomó la ración')}
+  }
+}
+function stepCube(dt){
+  const c=S.cube;
+  if(c.on&&c.mode==='release'){
+    c.vy-=GRAV*dt;c.y+=c.vy*dt;c.rx+=dt*3;c.rz+=dt*2;
+    if(c.y<=G+0.4+chH()+1.2){c.on=false;S.flyP-=20;S.chP+=20}
+  }
+}
+function doSupp(dt){
+  if(!S.suppStarted){
+    if(S.flyP>0.01||S.flyL>0.01)return;
+    S.suppStarted=true;S.suppBase=chT();
+  }
+  S.wa=approach(S.wa,S.suppStop?0:7,20*dt);
+  if(!S.suppStop){
+    S.accS+=5*(1+0.05*Math.sin(S.t*2.3))*dt;
+    while(S.accS>=0.5){S.accS-=0.5;spawnPart('s',SX+rnd(-.3,.3),SY,SZ+rnd(-.3,.3),0.5,'ch',0,-rnd(0,6),0,rnd(0,0.08))}
+    const gain=chT()-S.suppBase+0.15*gauss();
+    if(gain+3.0>=S.plan.s)S.suppStop=true;
+    S.curA=approach(S.curA,0.45,6*dt);
+  }else{
+    S.curA=approach(S.curA,0,6*dt);
+    if(S.wa<0.05&&S.flyS<0.01){S.wa=0;goNext('supp')}
+  }
+}
+function doLiq(dt){
+  if(!S.liqStarted){
+    if(S.flyP>0.01||S.flyS>0.01)return;
+    S.liqStarted=true;S.liqEm=0;
+  }
+  S.wp=approach(S.wp,S.liqStop?0:6,16*dt);
+  if(!S.liqStop){
+    S.accL+=6*(1+0.04*Math.sin(S.t*1.7))*dt;
+    while(S.accL>=0.5){S.accL-=0.5;S.liqEm+=0.5;spawnPart('l',NZX+rnd(-.05,.05),NZY,NZZ+rnd(-.05,.05),0.5,'ch',0,0,0,0)}
+    if(S.liqEm+1.0>=S.plan.l){S.liqStop=true;S.coast=Math.max(0,Math.round((1.0+0.4*gauss())/0.5));S.coastT=0}
+    S.curA=approach(S.curA,0.6,6*dt);
+  }else{
+    S.curA=approach(S.curA,0,6*dt);
+    S.coastT+=dt;
+    if(S.coast>0&&S.coastT>0.25){S.coastT=0;S.coast--;S.liqEm+=0.5;spawnPart('l',NZX,NZY,NZZ,0.5,'ch',0,0,0,0)}
+    if(S.coast<=0&&S.wp<0.05&&S.flyL<0.01){S.wp=0;goNext('liq')}
+  }
+}
+function doGate(dt){
+  S.gate=approach(S.gate,S.gateT,2.6*dt);
+  if(S.gMode===0){
+    S.gateT=1.75;
+    if(S.gate>1.5){S.gMode=1}
+  }else if(S.gMode===1){
+    const tot=chT();
+    if(tot>0.5){
+      const dm=Math.min(tot,400*dt),fr=dm/tot;
+      S.chP-=S.chP*fr;S.chS-=S.chS*fr;S.chL-=S.chL*fr;S.accD+=dm;
+      while(S.accD>=5){S.accD-=5;spawnPart('d',rnd(-5,5),G-0.6,rnd(-4,4),5,'tr',rnd(-9,9),-rnd(4,20),rnd(-2,2),0)}
+    }else{
+      S.accD+=tot;S.chP=S.chS=S.chL=0;
+      if(S.accD>0.01){spawnPart('d',rnd(-3,3),G-0.6,rnd(-3,3),S.accD,'tr',0,-8,0,0);S.accD=0}
+      if(S.flyD<0.01){S.gMode=2;S.gt=0}
+    }
+  }else if(S.gMode===2){
+    S.gt+=dt;
+    if(S.gt>1.0)S.gateT=0;
+    if(S.gt>1.0&&S.gate<0.03){S.gate=0;finishCycle()}
+  }
+}
+
+/* paso de simulación (dt = segundos de simulación) */
+function step(dt,dtReal){
+  S.t+=dt;S.pt+=dt;
+  S.clock+=(S.phase==='idle'&&!S.cyc_busy)?dtReal*S.clockRate:dt;
+  S.augA+=S.wa*dt;S.pumpA+=S.wp*dt;
+  if(S.shake>0&&!S.jamS)S.shake=0;
+  switch(S.phase){
+    case 'idle':{
+      const tod=S.clock%86400,day=Math.floor(S.clock/86400);
+      S.curA=approach(S.curA,0,10*dt);
+      for(const sc of SCHED){
+        if(sc.on&&sc.fired!==day&&tod>=sc.sec){sc.fired=day;startCycle(sc.f,sc.s,sc.l,'horario '+sc.t);break}
+      }
+      break}
+    case 'tare': S.curA=0.15;if(S.pt>1.0)goNext('tare');break;
+    case 'rotor': doRotor(dt);break;
+    case 'supp': doSupp(dt);break;
+    case 'liq': doLiq(dt);break;
+    case 'settle':
+      S.curA=approach(S.curA,0,10*dt);
+      if(S.pt>2.2){
+        S.res={f:S.chP,s:S.chS,l:S.chL,aborted:!!S.abortFlag};S.abortFlag=false;
+        setPhase('gate');S.gMode=0;
+      }
+      break;
+    case 'gate': doGate(dt);break;
+    case 'done':
+      S.curA=approach(S.curA,0,10*dt);
+      if(S.pt>1.5){S.phase='idle';S.pt=0}
+      break;
+  }
+  stepCube(dt);
+  stepParts(dt);
+  if(S.eatWait>0)S.eatWait-=dt;
+  else if(S.trM>0)S.trM=Math.max(0,S.trM-18*dt);
+  S.wDisp+=(chT()+0.12*gauss()*(S.phase==='idle'?0:1)-S.wDisp)*(1-Math.exp(-14*dt));
+}
+/* ============================================================
+   Escena 3D (Three.js r128). Unidades: cm. Y arriba.
+   ============================================================ */
+function build3D(){
+  if(typeof THREE==='undefined')return null;
+  const canvas=$('#cv'),vp=$('#vp');
+  let renderer;
+  try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'})}catch(e){return null}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setClearColor(0x000000,0);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(36,1,1,700);
+
+  /* ---- luces ---- */
+  scene.add(new THREE.HemisphereLight(0xffffff,0x8a7a62,0.85));
+  const key=new THREE.DirectionalLight(0xffffff,0.85);key.position.set(70,130,110);scene.add(key);
+  const fill=new THREE.DirectionalLight(0xdfe8ff,0.35);fill.position.set(-90,60,60);scene.add(fill);
+
+  /* ---- texturas ---- */
+  function ctex(w,h,draw,rep){
+    const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(rep)t.repeat.set(rep[0],rep[1]);t.anisotropy=4;return t;
+  }
+  const pelletTex=ctex(256,256,(g,w,h)=>{
+    g.fillStyle='#6d4a28';g.fillRect(0,0,w,h);
+    const pal=['#8a6238','#5b3d20','#7a5530','#4d3a1e','#6f7a3a','#9a7344'];
+    for(let i=0;i<420;i++){
+      g.save();g.translate(Math.random()*w,Math.random()*h);g.rotate(Math.random()*6.28);
+      g.fillStyle=pal[(Math.random()*pal.length)|0];
+      const L=9+Math.random()*8,Wd=5+Math.random()*3;
+      g.beginPath();g.ellipse(0,0,L/2,Wd/2,0,0,6.283);g.fill();g.restore();
+    }
+  },[3,2]);
+  const woodTex=ctex(512,512,(g,w,h)=>{
+    const n=8,pw=w/n;
+    for(let i=0;i<n;i++){
+      const l=60+Math.random()*10;
+      g.fillStyle='hsl(33,'+(28+Math.random()*10)+'%,'+(l)+'%)';g.fillRect(i*pw,0,pw,h);
+      for(let k=0;k<26;k++){
+        g.strokeStyle='rgba(70,45,20,'+(0.05+Math.random()*0.1)+')';g.lineWidth=0.6+Math.random()*1.2;
+        const x=i*pw+Math.random()*pw;g.beginPath();g.moveTo(x,0);
+        g.bezierCurveTo(x+Math.random()*6-3,h*0.3,x+Math.random()*6-3,h*0.6,x+Math.random()*4-2,h);g.stroke();
+      }
+      g.fillStyle='rgba(40,25,10,.55)';g.fillRect(i*pw,0,2,h);
+    }
+  });
+  const labelTex=ctex(512,128,(g,w,h)=>{
+    g.fillStyle='rgba(0,0,0,0)';g.clearRect(0,0,w,h);
+    g.fillStyle='#f3efe3';g.font='700 76px "Barlow Condensed","Arial Narrow",Arial,sans-serif';g.textBaseline='middle';g.fillText('FeederBox',8,h/2+2);
+    g.fillStyle='#5fc2a0';g.fillRect(430,28,70,72);
+  });labelTex.wrapS=labelTex.wrapT=THREE.ClampToEdgeWrapping;
+
+  /* ---- materiales ---- */
+  const std=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:0.55,metalness:0.1},o||{}));
+  const M={
+    steel:std(0xaab1b8,{metalness:0.85,roughness:0.32}),
+    dark:std(0x2b2f33,{metalness:0.5,roughness:0.55}),
+    boxm:std(0x6a737c,{metalness:0.45,roughness:0.55}),
+    glass:std(0xcfe8ff,{transparent:true,opacity:0.17,roughness:0.08,metalness:0,side:THREE.DoubleSide,depthWrite:false}),
+    hopper:std(0xa9c9e6,{transparent:true,opacity:0.24,roughness:0.15,side:THREE.DoubleSide,depthWrite:false}),
+    rotor:std(0xe9792a,{roughness:0.5}),
+    pet:std(0x1f2226,{roughness:0.6}),
+    gold:std(0xb9a66b,{metalness:0.6,roughness:0.4}),
+    can:std(0xc6cbd1,{metalness:0.85,roughness:0.3}),
+    pcb:std(0x1e6e45,{roughness:0.6}),
+    red:std(0xb03a2e,{roughness:0.5}),
+    blue:std(0x2a5b9c,{roughness:0.5}),
+    wood:new THREE.MeshStandardMaterial({map:woodTex,color:0xffffff,roughness:0.95}),
+    floor:std(0xa38f66,{roughness:1}),
+    pellet:new THREE.MeshStandardMaterial({map:pelletTex,roughness:0.95}),
+    pelletCol:new THREE.MeshStandardMaterial({map:pelletTex,roughness:0.95,transparent:true,opacity:0.62}),
+    liquid:std(0xd99a2b,{transparent:true,opacity:0.78,roughness:0.2}),
+    powder:std(0xf1ead3,{roughness:0.9}),
+    zinc:std(0x9aa1a8,{metalness:0.8,roughness:0.4}),
+    cube:std(0x9fc23c,{roughness:0.9}),
+    front:std(0x6a737c,{metalness:0.5,roughness:0.5,transparent:true,opacity:0.1,depthWrite:false})
+  };
+  const led=new THREE.MeshStandardMaterial({color:0x222222,emissive:0x2ecc71,emissiveIntensity:1,roughness:0.4});
+  const ledB=new THREE.MeshStandardMaterial({color:0x222222,emissive:0x2ecc71,emissiveIntensity:1,roughness:0.4});
+
+  /* ---- helpers ---- */
+  const add=(m,p)=>{(p||scene).add(m);return m};
+  const box=(w,h,d,mat,x,y,z,p)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);return add(m,p)};
+  const cylY=(r1,r2,h,mat,x,y,z,seg,open,p)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,seg||40,1,!!open),mat);m.position.set(x,y,z);return add(m,p)};
+  const cylX=(r,h,mat,x,y,z,seg,p)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||32),mat);m.rotation.z=HP;m.position.set(x,y,z);return add(m,p)};
+  const cylZ=(r,h,mat,x,y,z,seg,p)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||32),mat);m.rotation.x=HP;m.position.set(x,y,z);return add(m,p)};
+  const ring=(r,t,mat,y,x,z)=>{const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,10,56),mat);m.rotation.x=HP;m.position.set(x||0,y,z||0);return add(m)};
+  function platHoles(w,d,thk,holes,mat,yTop){
+    const sh=new THREE.Shape();sh.moveTo(-w/2,-d/2);sh.lineTo(w/2,-d/2);sh.lineTo(w/2,d/2);sh.lineTo(-w/2,d/2);sh.lineTo(-w/2,-d/2);
+    holes.forEach(h=>{const p=new THREE.Path();p.absarc(h[0],h[1],h[2],0,TAU,true);sh.holes.push(p)});
+    const g=new THREE.ExtrudeGeometry(sh,{depth:thk,bevelEnabled:false,curveSegments:32});g.rotateX(HP);
+    const m=new THREE.Mesh(g,mat);m.position.y=yTop;return add(m);
+  }
+
+  /* ---- establo: pared y piso ---- */
+  const wall=new THREE.Mesh(new THREE.PlaneGeometry(200,150),M.wood);wall.position.set(0,52,-13.4);scene.add(wall);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,80),M.floor);floor.rotation.x=-HP;floor.position.set(0,-0.05,26);scene.add(floor);
+
+  /* ---- caja de acero ---- */
+  const BYC=(BOX_Y0+BOX_Y1)/2;
+  box(40.8,25.5,0.5,M.boxm,0,BYC,-8.75);                       // fondo
+  box(0.5,25.5,17.5,M.boxm,-20.25,BYC,0);box(0.5,25.5,17.5,M.boxm,20.25,BYC,0);
+  platHoles(40.8,17,0.45,[[0,0,R_OUT+0.12],[NZX,NZZ,0.5]],M.boxm,BOX_Y1+0.45);      // tapa
+  platHoles(40.8,17,0.45,[[0,0,R_OUT+0.12],[SX,SZ,0.75],[NZX,NZZ,0.5]],M.boxm,BOX_Y0+0.45); // base
+  const front=box(40.8,25.5,0.5,M.front,0,BYC,8.75);
+  const frontLabel=new THREE.Mesh(new THREE.PlaneGeometry(14,3.5),new THREE.MeshBasicMaterial({map:labelTex,transparent:true}));
+  frontLabel.position.set(-10,BYC+6,9.03);frontLabel.visible=false;scene.add(frontLabel);
+  const ledFront=new THREE.Mesh(new THREE.SphereGeometry(0.55,16,12),ledB);ledFront.position.set(16.5,BYC+6,9.1);scene.add(ledFront);
+  // tornillos de las esquinas
+  [[-19,-11.5],[19,-11.5],[-19,11.5],[19,11.5]].forEach(c=>cylZ(0.5,0.3,M.steel,c[0],BYC+c[1],9.05,12));
+
+  /* ---- tubo 4" ---- */
+  const tubeH=TUBE_Y1-TUBE_Y0;
+  cylY(R_OUT,R_OUT,tubeH,M.glass,0,TUBE_Y0+tubeH/2,0,56,true);
+  ring(R_OUT,0.22,M.steel,TUBE_Y0+0.2);
+  /* columna de alimento sobre el rotor */
+  const tubeFeed=cylY(R_IN-0.1,R_IN-0.1,TUBE_Y1-(ROTOR_Y+1.8),M.pelletCol,0,(TUBE_Y1+ROTOR_Y+1.8)/2,0,40);
+
+  /* ---- tolva ---- */
+  cylY(14,R_OUT,6,M.hopper,0,83,0,56,true);
+  cylY(14,14,20,M.hopper,0,96,0,56,true);
+  ring(14.05,0.35,M.steel,106);ring(14.05,0.3,M.steel,86);ring(14.05,0.3,M.steel,96);
+  const hopConeFeed=cylY(13.6,5.5,6,M.pellet,0,83,0,40);
+  const hopCylFeed=cylY(13.7,13.7,1,M.pellet,0,86.5,0,48);
+  const hopLid=cylY(14.6,14.6,0.7,M.hopper,0,106.4,0,48);hopLid.visible=false; // sin tapa (visible el nivel)
+
+  /* ---- rotor (eje X) ---- */
+  const rotorG=new THREE.Group();rotorG.position.set(0,ROTOR_Y,0);scene.add(rotorG);
+  {
+    const Rv=4.25,x0=1.1;
+    const sh=new THREE.Shape();sh.moveTo(Rv,x0);sh.absarc(0,x0,Rv,0,Math.PI,false);
+    const vg=new THREE.ExtrudeGeometry(sh,{depth:0.44,bevelEnabled:false,curveSegments:56});vg.translate(0,0,-0.22);
+    for(let k=0;k<4;k++){const v=new THREE.Mesh(vg,M.rotor);v.rotation.x=k*HP;rotorG.add(v)}
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,8.5,40),M.rotor);hub.rotation.z=HP;rotorG.add(hub);
+    // eje de 8 mm, acople y eje del motor
+    const sft=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,15.6,20),M.steel);sft.rotation.z=HP;sft.position.x=(-6.8+8.8)/2;rotorG.add(sft);
+    const cp=new THREE.Mesh(new THREE.CylinderGeometry(0.97,0.97,2.5,32),M.can);cp.rotation.z=HP;cp.position.x=7.7;rotorG.add(cp);
+    for(let i=0;i<4;i++){const gr=new THREE.Mesh(new THREE.TorusGeometry(0.97,0.06,6,32),M.dark);gr.rotation.y=HP;gr.position.x=6.9+i*0.55;rotorG.add(gr)}
+    const sc=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),M.dark);sc.position.set(7.6,0.97,0);rotorG.add(sc);
+    const pin=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,2.9,10),M.steel);pin.position.set(0,0,0);rotorG.add(pin);
+  }
+  /* soportes impresos y motorreductor */
+  box(0.55,6.2,7.4,M.pet,R_OUT+0.45,ROTOR_Y,-0.6);                // placa del buje del motor
+  [[2.2,1.8],[2.2,-2.4],[-2.2,1.8],[-2.2,-2.4]].forEach(c=>box(0.6,0.6,0.6,M.pet,8.0,ROTOR_Y+c[0],c[1]));
+  [[2.2,1.8],[2.2,-2.4],[-2.2,1.8],[-2.2,-2.4]].forEach(c=>box(3.2,0.55,0.55,M.pet,7.7,ROTOR_Y+c[0],c[1]));
+  box(0.6,5.4,4.6,M.pet,9.4,ROTOR_Y,-0.3);                         // brida
+  box(2.52,4.6,3.2,M.gold,10.96,ROTOR_Y+0.4,0);                    // caja reductora
+  const can=new THREE.Mesh(new THREE.CylinderGeometry(1.22,1.22,3.08,28),M.can);can.position.set(10.96,ROTOR_Y+0.4-2.3-1.54,0);scene.add(can);
+  cylY(1.1,1.1,0.4,M.dark,10.96,ROTOR_Y-4.2-1.0+0.4,0,24);
+  /* soporte del rodamiento 608 (lado izquierdo) */
+  box(0.55,5.6,6,M.pet,-(R_OUT+0.45),ROTOR_Y,0);
+  cylX(1.7,1.35,M.pet,-(R_OUT+0.6+0.7),ROTOR_Y,0,36);
+  cylX(1.1,0.8,M.steel,-(R_OUT+0.6+1.35),ROTOR_Y,0,28);
+
+  /* ---- electrónica en el fondo de la caja ---- */
+  const bz=-8.35,ey=BOX_Y1-4;
+  box(5.8,0.2,3.0,M.pcb,-14.5,ey,bz);box(1.6,0.14,1.4,M.dark,-13.8,ey+0.18,bz+0.05);box(2.6,0.08,1.1,M.steel,-15.5,ey+0.15,bz+0.1);
+  const espLed=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),led);espLed.position.set(-12.0,ey+0.25,bz+0.8);scene.add(espLed);
+  box(3.8,0.2,2.3,M.blue,-9,ey,bz);cylZ(0.55,0.2,M.can,-9,ey,bz+0.2,18);
+  box(4.8,0.2,4.2,M.red,9,ey,bz);box(4.2,1.3,3.6,M.zinc,9,ey+0.7,bz+0.1);
+  box(8.5,3.2,0.9,M.zinc,16,ey-0.2,bz-0.2);
+  box(5,1.6,0.2,M.dark,2,ey,bz);  // regleta
+  // cables
+  function wire(pts,c){const cu=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],p[1],p[2])));const m=new THREE.Mesh(new THREE.TubeGeometry(cu,40,0.09,6,false),std(c,{roughness:0.8}));scene.add(m)}
+  wire([[9,ey-1,bz+0.5],[9.5,ROTOR_Y+5,-4],[10.5,ROTOR_Y+3,-1.5],[10.96,ROTOR_Y+1,-1.2]],0xd23a2a);
+  wire([[8.2,ey-1,bz+0.5],[8.5,ROTOR_Y+5.5,-5],[9.8,ROTOR_Y+3,-1.8],[10.5,ROTOR_Y+1,-1.4]],0x222222);
+  wire([[-14.5,ey-0.5,bz+0.5],[-12,ey-3,-6],[-4,ey-1,-6],[7,ey-0.8,bz+0.5]],0x2c6ccf);
+
+  /* ---- mini tolva + tornillo sin fin (suplemento) ---- */
+  const AY=56,AZ=4;
+  cylY(3.2,0.9,8,M.hopper,-14,AY+7,AZ,32,true);
+  cylY(0.9,0.9,1.4,M.hopper,-14,AY+2.4,AZ,20,true);
+  ring(3.25,0.2,M.steel,AY+11);
+  const supCone=cylY(3.0,0.85,7.5,M.powder,-14,AY+6.9,AZ,28);
+  cylX(1.15,11.5,M.glass,-12.75,AY,AZ,28);
+  cylY(0.65,0.65,AY-BOX_Y0+8,M.glass,SX,(AY+BOX_Y0-8)/2+0.5,SZ,20,true);   // pico hacia el comedero
+  const augerG=new THREE.Group();augerG.position.set(0,AY,AZ);scene.add(augerG);
+  {
+    const pts=[],N=160,turns=9,x0=-18,x1=SX+0.2;
+    for(let i=0;i<=N;i++){const u=i/N,a=u*turns*TAU;pts.push(new THREE.Vector3(x0+(x1-x0)*u,0.72*Math.cos(a),0.72*Math.sin(a)))}
+    augerG.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),200,0.17,6,false),M.steel));
+    const ax=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,11.6,10),M.steel);ax.rotation.z=HP;ax.position.x=(-18+SX)/2;augerG.add(ax);
+  }
+  cylX(0.65,2.6,M.can,-19.0,AY,AZ,20);cylX(0.55,1.4,M.gold,-17.4,AY,AZ,20);
+
+  /* ---- botella de líquido + celda de carga + bomba peristáltica ---- */
+  const BX=16,BZ=-3;
+  box(6.5,1.0,1.4,M.zinc,BX,53.3,BZ);box(1.2,0.06,0.9,M.blue,BX+1.5,53.84,BZ);
+  cylY(3.5,3.5,14,M.glass,BX,54.4+7,BZ,40);
+  cylY(1.2,1.2,1.2,M.dark,BX,54.4+14.6,BZ,24);
+  const bottleLiq=cylY(3.3,3.3,1,M.liquid,BX,54.9,BZ,36);
+  const PX=10.5,PY=53.3,PZ=5.3;
+  box(5.2,5.2,3.6,M.dark,PX,PY,PZ);
+  const pumpG=new THREE.Group();pumpG.position.set(PX,PY,PZ+2.3);scene.add(pumpG);
+  {
+    const d=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.7,0.8,32),M.zinc);d.rotation.x=HP;pumpG.add(d);
+    for(let i=0;i<3;i++){const a=i*TAU/3;const r=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,1.1,16),M.steel);r.rotation.x=HP;r.position.set(Math.cos(a)*1.25,Math.sin(a)*1.25,0.2);pumpG.add(r)}
+  }
+  cylZ(2.15,0.5,M.glass,PX,PY,PZ+2.1,36);
+  {
+    const hp=[
+      [BX,54.4,BZ],[BX,53,BZ],[BX-0.4,51.8,2],[13.4,52.4,6.2],[PX+2.2,PY,PZ+2.9],
+      [PX+1.5,PY+1.6,PZ+2.9],[PX,PY+2.3,PZ+2.9],[PX-1.5,PY+1.6,PZ+2.9],[PX-2.2,PY,PZ+2.9],
+      [8,52.2,6.4],[5.2,51.2,6.2],[NZX,50.4,NZZ],[NZX,NZY+0.2,NZZ]
+    ].map(p=>new THREE.Vector3(p[0],p[1],p[2]));
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hp),140,0.27,8,false),std(0xe9c36a,{transparent:true,opacity:0.8,roughness:0.3})));
+  }
+  cylY(0.42,0.2,0.9,M.steel,NZX,NZY+0.35,NZZ,12);
+
+  /* ---- cámara de pesado ---- */
+  cylY(CH_R+0.1,CH_R+0.1,CH_H,M.glass,0,G+CH_H/2,0,56,true);
+  ring(CH_R+0.1,0.35,M.steel,G);ring(CH_R+0.1,0.35,M.steel,G+CH_H);
+  cylY(10,CH_R+0.1,FUN_H,M.glass,0,G+CH_H+FUN_H/2,0,56,true);
+  ring(10,0.3,M.steel,G+CH_H+FUN_H);
+  // celda de carga (viga en voladizo) + soporte a la pared
+  box(7,11,0.5,M.zinc,0,G+10,-12.95);
+  box(3.4,1.9,5.8,M.steel,0,G+10,-10.3);box(1.4,0.06,2.4,M.blue,0,G+11,-10.3);
+  box(2.2,1.2,1.2,M.zinc,0,G+10,-7.8);
+  const chPile=new THREE.Mesh(new THREE.CylinderGeometry(CH_R-0.1,CH_R-0.1,1,40),M.pellet);scene.add(chPile);
+  /* compuerta con servo */
+  const gateG=new THREE.Group();gateG.position.set(0,G,-8);scene.add(gateG);
+  {
+    const d=new THREE.Mesh(new THREE.CylinderGeometry(8.4,8.4,0.5,56),M.dark);d.position.set(0,-0.25,8);gateG.add(d);
+    const tab=new THREE.Mesh(new THREE.BoxGeometry(3,0.5,2),M.dark);tab.position.set(0,-0.25,-0.8);gateG.add(tab);
+  }
+  cylX(0.3,20,M.steel,1,G,-8,12);
+  box(2.6,2.3,4.2,M.blue,11.8,G,-8);
+  const horn=box(0.5,3.4,0.6,M.can,13.4,G,-8);
+
+  /* ---- comedero ---- */
+  box(36.8,0.5,18.5,M.zinc,0,0.25,0);
+  box(36.8,7,0.5,M.zinc,0,3.5,9.1);box(36.8,7,0.5,M.zinc,0,3.5,-9.1);
+  box(0.5,7,18.5,M.zinc,-18.4,3.5,0);box(0.5,7,18.5,M.zinc,18.4,3.5,0);
+  box(37.6,0.7,0.9,M.wood,0,7.1,9.1);box(37.6,0.7,0.9,M.wood,0,7.1,-9.1);
+  const trPile=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,40),M.pellet);scene.add(trPile);
+
+  /* ---- indicador de nivel de la tolva ya está en hopConeFeed / hopCylFeed ---- */
+
+  /* ---- cubo de alfalfa (atasco) ---- */
+  const cubeMesh=new THREE.Mesh(new THREE.BoxGeometry(2.6,2.6,4.4),M.cube);cubeMesh.visible=false;scene.add(cubeMesh);
+
+  /* ---- partículas ---- */
+  const dummy=new THREE.Object3D();
+  const pelCols=[0xc08a4c,0xd09a5a,0xa87238,0x9aa84e].map(c=>new THREE.Color(c));
+  function inst(geo,mat,cap){const m=new THREE.InstancedMesh(geo,mat,cap);m.count=0;m.frustumCulled=false;m.setColorAt(0,new THREE.Color(1,1,1));scene.add(m);return m}
+  const iPel=inst(new THREE.CylinderGeometry(0.42,0.42,0.9,10),new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.9}),900);
+  const iPow=inst(new THREE.SphereGeometry(0.3,6,5),new THREE.MeshStandardMaterial({color:0xfaf5e4,roughness:1,emissive:0x555044}),400);
+  const iDrp=inst(new THREE.SphereGeometry(0.36,10,8),new THREE.MeshStandardMaterial({color:0xf0b030,emissive:0x4a3000,roughness:0.15,metalness:0.1}),200);
+
+  /* ---- cámara orbital ---- */
+  const PORTRAIT=(vp.clientWidth/Math.max(1,vp.clientHeight))<0.95;
+  const PRE={
+    general:PORTRAIT?{az:0.42,el:0.17,r:225,tx:0,ty:60,tz:0}:{az:0.42,el:0.17,r:208,tx:0,ty:51,tz:0},
+    rotor:{az:0.30,el:0.10,r:64,tx:2,ty:ROTOR_Y,tz:0},
+    dosif:{az:0.05,el:0.14,r:78,tx:2,ty:55,tz:0},
+    camara:{az:0.55,el:0.16,r:80,tx:0,ty:28,tz:0},
+    comedero:{az:0.55,el:0.36,r:78,tx:0,ty:8,tz:0}
+  };
+  const cam=Object.assign({},PRE.general),camT=Object.assign({},PRE.general);
+  function applyCam(){
+    const ce=Math.cos(cam.el);
+    camera.position.set(cam.tx+cam.r*ce*Math.sin(cam.az),cam.ty+cam.r*Math.sin(cam.el),cam.tz+cam.r*ce*Math.cos(cam.az));
+    camera.lookAt(cam.tx,cam.ty,cam.tz);
+  }
+  function setCam(name){Object.assign(camT,PRE[name]);$$('.camBtn').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cam===name)))}
+  function userMoved(){Object.assign(camT,cam);$$('.camBtn').forEach(b=>b.setAttribute('aria-pressed','false'))}
+  const ptrs=new Map();let pinch0=0,r0=0;
+  canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===2){const a=[...ptrs.values()];pinch0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);r0=cam.r}});
+  canvas.addEventListener('pointermove',e=>{
+    const p=ptrs.get(e.pointerId);if(!p)return;
+    const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptrs.size===1){cam.az-=dx*0.0065;cam.el=clamp(cam.el+dy*0.005,-0.15,1.3);userMoved()}
+    else if(ptrs.size===2){const a=[...ptrs.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0>0){cam.r=clamp(r0*pinch0/d,35,300);userMoved()}}
+  });
+  const endP=e=>{ptrs.delete(e.pointerId)};
+  canvas.addEventListener('pointerup',endP);canvas.addEventListener('pointercancel',endP);
+  canvas.addEventListener('wheel',e=>{e.preventDefault();cam.r=clamp(cam.r*(1+e.deltaY*0.0012),35,300);userMoved()},{passive:false});
+  $$('.camBtn').forEach(b=>b.addEventListener('click',()=>setCam(b.dataset.cam)));
+
+  /* ---- etiquetas HTML ---- */
+  const LB=[
+    ['Tolva',[14,98,0]],['Tubo 4″ (transparente aquí)',[5.8,77,0]],['Rotor de 4 aspas',[0,ROTOR_Y-5,5]],['Motor 12 V + reductor',[12.4,ROTOR_Y+2.8,0]],
+    ['ESP32 + RTC',[-14.5,BOX_Y1-4,-8]],
+    ['Mini tornillo (suplemento)',[-15,AY+9,AZ]],['Botella + celda de carga',[BX+3.6,60,BZ]],['Bomba peristáltica',[PX+3,PY+1,PZ+2]],
+    ['Cámara de pesado',[-CH_R-0.3,G+8,0]],['Celda de carga',[2,G+11.2,-10.3]],['Compuerta + servo',[14.2,G,-8]],['Comedero',[19,4,0]]
+  ];
+  const lblWrap=$('#labels');
+  const LEFT={'Mini tornillo (suplemento)':1,'ESP32 + RTC':1,'Cámara de pesado':1};
+  const lbls=LB.map(l=>{const d=document.createElement('div');d.className='lbl'+(LEFT[l[0]]?' l':'');d.textContent=l[0];lblWrap.appendChild(d);return{el:d,v:new THREE.Vector3(l[1][0],l[1][1],l[1][2])}});
+  let showLabels=window.innerWidth>760;
+  const tmpV=new THREE.Vector3();
+  function updLabels(w,h){
+    lblWrap.style.display=showLabels?'block':'none';if(!showLabels)return;
+    for(const l of lbls){
+      tmpV.copy(l.v).project(camera);
+      const ok=tmpV.z<1&&Math.abs(tmpV.x)<1.05&&Math.abs(tmpV.y)<1.05;
+      l.el.style.display=ok?'block':'none';
+      if(ok){l.el.style.left=((tmpV.x*0.5+0.5)*w)+'px';l.el.style.top=((-tmpV.y*0.5+0.5)*h)+'px'}
+    }
+  }
+  const btnL=$('#btnLabels');btnL.setAttribute('aria-pressed',String(showLabels));
+  btnL.addEventListener('click',()=>{showLabels=!showLabels;btnL.setAttribute('aria-pressed',String(showLabels))});
+  let closed=false;const btnC=$('#btnClosed');
+  btnC.addEventListener('click',()=>{
+    closed=!closed;btnC.setAttribute('aria-pressed',String(closed));
+    M.front.opacity=closed?1:0.1;M.front.depthWrite=closed;frontLabel.visible=closed;
+  });
+
+  /* ---- tamaño ---- */
+  let W=0,H=0;
+  function resize(){
+    const r=vp.getBoundingClientRect();W=Math.max(10,r.width);H=Math.max(10,r.height);
+    renderer.setSize(W,H,false);camera.aspect=W/H;camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(vp);resize();
+
+  /* ---- tema (pared/piso) ---- */
+  function applyTheme(){
+    const t=getComputedStyle(document.documentElement).getPropertyValue('--wall-tint').trim()||'#d6cdbb';
+    M.wood.color.set(t);M.floor.color.set(t==='#d6cdbb'?0xa38f66:0x5a4d36);
+  }
+  applyTheme();
+  try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme)}catch(e){}
+  new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+  /* ---- render (lee el estado S) ---- */
+  const wetCol=new THREE.Color();
+  let tm=0;
+  function render(dtReal){
+    tm+=dtReal;
+    // cámara suave
+    const k=1-Math.exp(-6*dtReal);
+    for(const key2 of ['az','el','r','tx','ty','tz'])cam[key2]+=(camT[key2]-cam[key2])*k;
+    applyCam();
+    // rotor
+    rotorG.rotation.x=S.th+(S.shake?S.shake*Math.sin(tm*70):0);
+    rotorG.position.y=ROTOR_Y+(S.shake?0.06*Math.sin(tm*83):0);
+    augerG.rotation.x=S.augA;pumpG.rotation.z=-S.pumpA;
+    gateG.rotation.x=S.gate;horn.rotation.x=S.gate;horn.position.set(13.4,G-1.5*Math.sin(S.gate)*0,-8);
+    // nivel tolva / suministros
+    const lv=hopLevel();
+    hopCylFeed.visible=lv>0.05;hopCylFeed.scale.y=Math.max(0.01,lv);hopCylFeed.position.y=86+lv/2;
+    const cf=clamp(S.stock/CONE_G,0,1);hopConeFeed.visible=cf>0.02;hopConeFeed.scale.set(Math.max(0.2,cf),Math.max(0.05,cf),Math.max(0.2,cf));hopConeFeed.position.y=80+3*Math.max(0.05,cf);
+    tubeFeed.visible=S.stock>5;
+    const sf=clamp(S.sup/500,0,1);supCone.visible=sf>0.02;supCone.scale.set(1,Math.max(0.05,sf),1);supCone.position.y=AY+3.15+7.5*sf/2;
+    const bl=clamp(S.liq/1000,0,1)*13;bottleLiq.visible=bl>0.05;bottleLiq.scale.y=Math.max(0.01,bl);bottleLiq.position.y=54.4+0.5+bl/2;
+    // montón en la cámara
+    const h=chH();
+    chPile.visible=h>0.03;chPile.scale.set(1,Math.max(0.01,h),1);chPile.position.set(0,G+0.3+h/2,0);
+    const wet=clamp(S.chL/Math.max(1,chT())*8,0,0.55);
+    wetCol.setRGB(1-wet*0.7,1-wet*0.75,1-wet*0.8);M.pellet.color.copy(wetCol);
+    // montón en el comedero
+    const ts=troughShape();
+    trPile.visible=S.trM>0.5;trPile.scale.set(ts.rx,Math.max(0.01,ts.h),ts.rz);trPile.position.set(0,0.5+ts.h/2,0);
+    // cubo
+    const c=S.cube;cubeMesh.visible=!!c.on;
+    if(c.on){
+      if(c.mode==='stuck'||c.mode==='fall'){cubeMesh.position.set(c.x+0.2,c.y,c.z);cubeMesh.rotation.set(0.6+c.rx*0.3,0.4,0.9+c.rz*0.3)}
+      else{cubeMesh.position.set(c.x+0.2,c.y,c.z);cubeMesh.rotation.set(c.rx,c.ry,c.rz)}
+    }
+    // partículas
+    let np=0,ns=0,nd=0;
+    for(let i=0;i<parts.length;i++){
+      const p=parts[i];if(p.delay>0)continue;
+      dummy.position.set(p.x,p.y,p.z);
+      if(p.k==='p'||p.k==='d'){if(np>=900)continue;dummy.rotation.set(p.rot,p.rot*0.7,p.rot*0.4);dummy.scale.set(1,1,1);dummy.updateMatrix();iPel.setMatrixAt(np,dummy.matrix);iPel.setColorAt(np,pelCols[p.c]);np++}
+      else if(p.k==='s'){if(ns>=400)continue;dummy.rotation.set(0,0,0);dummy.scale.set(1,1,1);dummy.updateMatrix();iPow.setMatrixAt(ns++,dummy.matrix)}
+      else{if(nd>=200)continue;dummy.rotation.set(0,0,0);dummy.scale.set(1,1.25,1);dummy.updateMatrix();iDrp.setMatrixAt(nd++,dummy.matrix)}
+    }
+    iPel.count=np;iPow.count=ns;iDrp.count=nd;
+    iPel.instanceMatrix.needsUpdate=true;iPow.instanceMatrix.needsUpdate=true;iDrp.instanceMatrix.needsUpdate=true;
+    if(iPel.instanceColor)iPel.instanceColor.needsUpdate=true;
+    // LED de estado
+    const jam=S.jamS&&S.jamS.mode!=='pause';
+    const run=S.phase!=='idle'&&S.phase!=='done';
+    const col=jam?0xe74c3c:run?0x3b9dff:0x2ecc71;
+    const pulse=jam?(0.5+0.5*Math.sin(tm*14)):run?(0.6+0.4*Math.sin(tm*6)):(0.45+0.55*Math.max(0,Math.sin(tm*2.2)));
+    led.emissive.setHex(col);led.emissiveIntensity=0.3+pulse*1.4;ledB.emissive.setHex(col);ledB.emissiveIntensity=0.3+pulse*1.4;
+    renderer.render(scene,camera);
+    updLabels(W,H);
+  }
+  applyCam();
+  return{render,setCam};
+}
+/* ============================================================
+   App del celular + panel de simulación + bucle principal
+   ============================================================ */
+const MAN={f:800,s:20,l:30};
+const PHN={idle:['En reposo','Listo para dosificar'],tare:['Preparando','Tarando la celda de carga'],rotor:['Dosificando alimento',''],
+  supp:['Dosificando suplemento','Mini tornillo girando'],liq:['Dosificando líquido','Bomba peristáltica en marcha'],
+  settle:['Verificando peso','Esperando que la lectura se estabilice'],gate:['Sirviendo en el comedero','Compuerta abierta'],done:['Ración servida','Todo en el comedero']};
+const HUDP={idle:'En reposo',tare:'Tarando celda',rotor:'Dosificando alimento (rotor)',supp:'Suplemento (mini tornillo)',liq:'Líquido (bomba)',settle:'Estabilizando peso',gate:'Abriendo compuerta',done:'Ración servida'};
+
+let toastT=0;
+UI.toast=msg=>{const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),4200)};
+
+/* ---- pestañas ---- */
+$$('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  $$('.tabs button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
+  ['hoy','prog','hist'].forEach(k=>{$('#v-'+k).style.display=(k===b.dataset.tab)?'contents':'none'});
+  $('.views').scrollTop=0;
+}));
+
+/* ---- ración manual ---- */
+$$('.stp').forEach(el=>{
+  const k=el.dataset.k,step=+el.dataset.step,mn=+el.dataset.min,mx=+el.dataset.max,out=$('output',el);
+  const bs=$$('button',el);
+  const paint=()=>{out.textContent=MAN[k]+' g'};
+  bs[0].addEventListener('click',()=>{MAN[k]=clamp(MAN[k]-step,mn,mx);paint()});
+  bs[1].addEventListener('click',()=>{MAN[k]=clamp(MAN[k]+step,mn,mx);paint()});
+  paint();
+});
+$('#btnManual').addEventListener('click',()=>{const m=$('#manual');m.hidden=!m.hidden;if(!m.hidden)m.scrollIntoView({block:'nearest',behavior:'smooth'})});
+$('#btnStart').addEventListener('click',()=>{if(startCycle(MAN.f,MAN.s,MAN.l,'manual')){$('#manual').hidden=true;$('.views').scrollTop=0}});
+$('#btnStop').addEventListener('click',abortCycle);
+
+/* ---- horarios ---- */
+function schedTotals(){
+  const a=SCHED.filter(x=>x.on);
+  $('#schedTot').textContent='Total diario: '+a.reduce((n,x)=>n+x.f,0)+' g de alimento · '+a.reduce((n,x)=>n+x.s,0)+' g de suplemento · '+a.reduce((n,x)=>n+x.l,0)+' g de líquido';
+}
+function renderSched(){
+  const box=$('#schedList');box.innerHTML='';
+  SCHED.forEach((sc,i)=>{
+    const d=document.createElement('div');d.className='card sched'+(sc.on?'':' off');d.dataset.i=i;
+    d.innerHTML='<div class="h"><input type="time" data-k="t" value="'+sc.t+'" aria-label="Hora"><span class="row" style="gap:10px"><button class="del" data-del="1">Quitar</button><label class="sw" style="flex-direction:row"><input type="checkbox" data-k="on" '+(sc.on?'checked':'')+' aria-label="Activar horario"><span></span></label></span></div>'
+      +'<div class="nums"><label>Alimento g<input type="number" data-k="f" min="0" max="2000" step="50" value="'+sc.f+'"></label><label>Suplem. g<input type="number" data-k="s" min="0" max="100" step="5" value="'+sc.s+'"></label><label>Líquido g<input type="number" data-k="l" min="0" max="100" step="5" value="'+sc.l+'"></label></div>';
+    box.appendChild(d);
+  });
+  $('#btnAdd').hidden=SCHED.length>=6;
+  schedTotals();
+}
+$('#schedList').addEventListener('change',e=>{
+  const card=e.target.closest('.sched');if(!card)return;
+  const sc=SCHED[+card.dataset.i],k=e.target.dataset.k;if(!sc||!k)return;
+  if(k==='t'){if(/^\d\d:\d\d$/.test(e.target.value)){sc.t=e.target.value}else e.target.value=sc.t}
+  else if(k==='on'){sc.on=e.target.checked;card.classList.toggle('off',!sc.on)}
+  else{const mx=k==='f'?2000:100;sc[k]=clamp(Math.round(+e.target.value||0),0,mx);e.target.value=sc[k]}
+  resetFired(sc);saveSched();schedTotals();
+});
+$('#schedList').addEventListener('click',e=>{
+  if(!e.target.dataset.del)return;
+  const card=e.target.closest('.sched');SCHED.splice(+card.dataset.i,1);saveSched();renderSched();
+});
+$('#btnAdd').addEventListener('click',()=>{
+  if(SCHED.length>=6)return;
+  const sc={id:Date.now(),t:'09:00',f:600,s:0,l:0,on:true};resetFired(sc);SCHED.push(sc);saveSched();renderSched();
+});
+
+/* ---- historial ---- */
+function renderHist(){
+  const box=$('#histList');box.innerHTML='';
+  HIST.slice(0,14).forEach(h=>{
+    const d=document.createElement('div');d.className='hi';
+    const err=h.p.f?((h.r.f-h.p.f)/h.p.f*100):0;
+    d.innerHTML='<span class="tm">'+h.time+'</span><span class="dd">'+h.day+(h.aborted?' · detenido':'')+'</span>'
+      +'<span class="rs">'+h.p.f+' g → '+Math.round(h.r.f)+' g ('+(err>=0?'+':'')+err.toFixed(1)+'%)'
+      +(h.p.s?' · supl. '+h.r.s.toFixed(1)+'/'+h.p.s:'')+(h.p.l?' · líq. '+h.r.l.toFixed(1)+'/'+h.p.l:'')
+      +(h.jams?' · <em>atasco resuelto</em>':'')+'</span>';
+    box.appendChild(d);
+  });
+}
+UI.hist=renderHist;
+
+/* ---- panel de simulación ---- */
+$$('#spd .btn').forEach(b=>b.addEventListener('click',()=>{
+  S.speed=+b.dataset.spd;$$('#spd .btn').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+}));
+$('#btnPause').addEventListener('click',e=>{S.paused=!S.paused;e.currentTarget.setAttribute('aria-pressed',String(S.paused));e.currentTarget.textContent=S.paused?'Reanudar':'Pausar'});
+$$('#clkRate .btn').forEach(b=>b.addEventListener('click',()=>{
+  S.clockRate=+b.dataset.r;$$('#clkRate .btn').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+}));
+$('#btnSkip').addEventListener('click',()=>{
+  if(S.phase!=='idle'){UI.toast('Espera a que termine el ciclo en curso');return}
+  const on=SCHED.filter(x=>x.on);if(!on.length){UI.toast('No hay horarios activos');return}
+  const tod=S.clock%86400,day=Math.floor(S.clock/86400);
+  let best=null;on.forEach(x=>{if(x.sec>tod+2&&(!best||x.sec<best.sec))best=x});
+  if(best){S.clock=day*86400+best.sec-6}
+  else{const f=on.reduce((a,x)=>x.sec<a.sec?x:a,on[0]);S.clock=(day+1)*86400+f.sec-6;SCHED.forEach(resetFired)}
+});
+$('#gpv').addEventListener('input',e=>{S.gpv=+e.target.value;$('#gpvVal').textContent=S.gpv+' g'});
+$('#btnJam').addEventListener('click',()=>{
+  S.jamArmed=true;$('#jamNote').hidden=false;
+  UI.toast(S.phase==='rotor'?'Atasco armado: ocurrirá en un momento':'Atasco armado: ocurrirá en la próxima ración');
+});
+$('#btnRefill').addEventListener('click',()=>{S.stock=7200;S.sup=500;S.liq=1000;UI.toast('Insumos rellenados')});
+
+/* ---- actualización de textos ---- */
+function nextInfo(){
+  const on=SCHED.filter(x=>x.on);if(!on.length)return null;
+  const tod=S.clock%86400;let best=null,add=0;
+  on.forEach(x=>{if(x.sec>tod&&(!best||x.sec<best.sec))best=x});
+  if(!best){best=on.reduce((a,x)=>x.sec<a.sec?x:a,on[0]);add=86400}
+  return{sc:best,left:best.sec+add-tod};
+}
+function fmtLeft(s){
+  if(s<90)return 'en '+Math.max(1,Math.round(s))+' s';
+  const m=Math.round(s/60);if(m<60)return 'en '+m+' min';
+  return 'en '+Math.floor(m/60)+' h '+pad(m%60)+' min';
+}
+const setBar=(id,v,t,tgt)=>{$('#b'+id).style.width=(tgt>0?clamp(v/tgt*100,0,100):0)+'%'};
+let lastUI=0;
+function updateUI(force){
+  const now=performance.now();if(!force&&now-lastUI<90)return;lastUI=now;
+  const ph=S.phase,jam=S.jamS;
+  $('#clk').textContent=fmtTS(S.clock);$('#pClock').textContent=fmtT(S.clock);
+  let ti=PHN[ph][0],sub=PHN[ph][1];
+  if(ph==='rotor'){
+    const turns=Math.max(0,(S.th-S.th0))/TAU;
+    sub='Rotor girando · '+turns.toFixed(1)+' vueltas';
+    if(jam&&jam.mode!=='pause'){ti='Atasco detectado';sub=jam.mode==='stall'?'Corriente alta en el motor…':jam.mode==='detect'?'Motor detenido por seguridad':'Invirtiendo el giro para liberar'}
+    else if(jam)sub='Retomando la ración';
+  }
+  if(ph==='done'&&S.last&&S.last.r.aborted)ti='Ciclo detenido';
+  $('#stTitle').textContent=ti;$('#stSub').textContent=sub;
+  const dec=(ph==='supp'||ph==='liq'||ph==='settle')?1:0;
+  $('#liveW').textContent=Math.max(0,S.wDisp).toFixed(dec)+' g';
+  const pl=S.plan,r=(ph==='idle'||ph==='done')&&S.last?S.last.r:{f:S.chP,s:S.chS,l:S.chL};
+  const tg=(ph==='idle'||ph==='done')&&S.last?S.last.p:pl;
+  if(tg){
+    setBar('F',r.f,0,tg.f);setBar('S',r.s,0,tg.s);setBar('L',r.l,0,tg.l);
+    $('#tF').textContent=Math.round(r.f)+' / '+tg.f+' g';
+    $('#tS').textContent=tg.s?r.s.toFixed(1)+' / '+tg.s+' g':'—';
+    $('#tL').textContent=tg.l?r.l.toFixed(1)+' / '+tg.l+' g':'—';
+  }
+  const ab=$('#alertBox');
+  if(S.alertMsg){ab.hidden=false;ab.innerHTML=S.alertMsg+'<small>'+(jam?'Pico de corriente '+S.curA.toFixed(1)+' A · el ESP32 invierte el giro automáticamente.':'Revisa el alimento de la tolva.')+'</small>'}
+  else ab.hidden=true;
+  const busy=ph!=='idle'&&ph!=='done';
+  $('#btnStop').hidden=!(busy&&ph!=='gate'&&ph!=='settle');
+  $('#btnManual').disabled=busy;$('#btnStart').disabled=busy;
+  const nx=nextInfo();
+  if(nx){$('#nxWhen').textContent=nx.sc.t;$('#nxWhat').innerHTML=nx.sc.f+' g · '+nx.sc.s+' g · '+nx.sc.l+' g<br>'+fmtLeft(nx.left)}
+  else{$('#nxWhen').textContent='—';$('#nxWhat').textContent='Sin horarios activos'}
+  const kg=S.stock/1000;
+  $('#kHop').textContent=kg.toFixed(1)+' kg';$('#kHopB').style.width=clamp(S.stock/HOP_CAP*100,0,100)+'%';
+  $('#kSup').textContent=Math.round(S.sup)+' g';$('#kSupB').style.width=clamp(S.sup/500*100,0,100)+'%';
+  $('#kLiq').textContent=Math.round(S.liq)+' g';$('#kLiqB').style.width=clamp(S.liq/1000*100,0,100)+'%';
+  // HUD 3D
+  $('#hudPhase').textContent=(jam&&jam.mode!=='pause')?'ATASCO · '+(jam.mode==='rev'?'reversa':jam.mode==='detect'?'motor detenido':'corriente alta'):HUDP[ph];
+  $('#hudW').textContent=Math.max(0,S.wDisp).toFixed(1)+' g';
+  $('#hudA').textContent=S.curA.toFixed(1)+' A';
+  $('#hudRpm').textContent=(S.w*60/TAU).toFixed(1)+' RPM';
+  $('#hudT').textContent=Math.round(S.trM)+' g';
+  $('#spdNote').textContent=S.phase==='idle'?'':'ciclo en curso';
+  if(!S.jamArmed)$('#jamNote').hidden=true;
+}
+
+/* ---- arranque ---- */
+renderSched();renderHist();
+const V=build3D();
+if(!V){$('#fallback').hidden=false}
+let lastT=performance.now();
+function frame(now){
+  const dtR=Math.min(0.1,(now-lastT)/1000);lastT=now;
+  if(!S.paused){
+    const dtS=dtR*S.speed,n=Math.max(1,Math.ceil(dtS/0.025)),h=dtS/n;
+    for(let i=0;i<n;i++)step(h,h/S.speed);
+  }
+  if(V)V.render(dtR);
+  updateUI();
+  requestAnimationFrame(frame);
+}
+updateUI(true);
+requestAnimationFrame(frame);
+window.__fb={S,startCycle,step,parts,SCHED,HIST};
+
+})();
+</script>
+</body>
+</html>
